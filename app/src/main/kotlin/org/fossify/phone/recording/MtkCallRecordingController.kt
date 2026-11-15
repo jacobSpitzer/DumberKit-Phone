@@ -1,39 +1,36 @@
 package org.fossify.phone.recording
 
-import android.content.Context
-import android.content.Intent
+import android.telecom.Call
 import android.util.Log
 
 /**
- * Experimental, non-privileged MediaTek Telecom integration.
+ * Matches the OEM DOOV R77 Pro dialer's TelecomAdapter.toggleVoiceRecording().
  *
- * The DOOV R77 Pro contains the privileged MediaTek CallRecorderService. Its host Telecom
- * package references these actions. Sending them as an ordinary default-dialer application
- * MAY be rejected or silently ignored; this intentionally does not claim audio was recorded.
+ * The stock com.android.dialer sends these exact events to the active android.telecom.Call
+ * using the public Call.sendCallEvent API. MediaTek's privileged telephony implementation
+ * remains responsible for handling recording and capturing both audio channels.
  *
- * This code does not install root tools, start Shizuku or change system settings.
+ * sendCallEvent() does not acknowledge that the ConnectionService accepted or acted on it.
  */
 object MtkCallRecordingController {
     private const val TAG = "DumberKitMtkRecorder"
-    private const val TELECOM_PACKAGE = "com.android.server.telecom"
-
-    private const val ACTION_START = "mediatek.telecom.action.CALL_RECORD"
-    private const val ACTION_STOP = "mediatek.telecom.action.STOP_CALL_RECORD"
+    private const val EVENT_START = "mediatek.telecom.event.REQUEST_START_VOICE_RECORDING"
+    private const val EVENT_STOP = "mediatek.telecom.event.REQUEST_STOP_VOICE_RECORDING"
 
     /**
-     * @return null if Android accepted the broadcast submission. This does NOT confirm that
-     *         Telecom received it or that recording actually started or stopped.
-     *         Otherwise returns a short error message to display.
+     * Returns null when the event is dispatched without a local exception, NOT when recording
+     * has been confirmed. Tests must verify that the device actually saved a recording.
      */
-    fun request(context: Context, start: Boolean): String? {
-        val action = if (start) ACTION_START else ACTION_STOP
+    fun request(call: Call?, start: Boolean): String? {
+        if (call == null) return "No active call"
+        val event = if (start) EVENT_START else EVENT_STOP
         return try {
-            val intent = Intent(action).setPackage(TELECOM_PACKAGE)
-            context.sendBroadcast(intent)
-            Log.i(TAG, "Sent experimental Telecom action: $action (not an acknowledgement)")
+            // The OEM stock Dialer passes a null extras Bundle for both commands.
+            call.sendCallEvent(event, null)
+            Log.i(TAG, "Sent OEM Call.sendCallEvent: $event (no success acknowledgement)")
             null
         } catch (e: Exception) {
-            Log.w(TAG, "Telecom refused action $action", e)
+            Log.w(TAG, "Unable to dispatch OEM call event: $event", e)
             e.message ?: e.javaClass.simpleName
         }
     }
