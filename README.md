@@ -1,9 +1,9 @@
-# DumberKit: Phone
+# R77 Pro Phone
 <img alt="Logo" src="graphics/icon.png" width="120" />
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://ko-fi.com/lbockaj)
 
-A phone app made for **keypad phones** – the Qin F21, Dumber Mini, Doov R77 Pro and other small Android phones with a
+**R77 Pro Phone** is a keypad-first Fossify/DumberKit-derived dialer customized for the **DOOV R77 Pro**. Other Android keypad phones may work, but have not been verified. A phone app made for small Android devices with a
 D-pad and a T9 keypad. Dialing, the call history, contacts and the calls themselves work with the keys alone: the
 digits start dialing right away, the green key calls, and the call screen is a row of buttons you move through with
 ← / →. There are no floating buttons, no swiping and no on-screen dialpad, and the layout fits a 480×640 screen.
@@ -20,6 +20,18 @@ nothing gets pressed by accident in your pocket.
 <img alt="Favorites" src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.png" width="19%">
 </div>
 
+## DOOV R77 Pro improvements
+
+- Manual Record / Stop controls reuse the DOOV's native MediaTek call recorder via the active Telecom Call.
+- **OK on a recent call** opens a complete per-number call-history timeline, including individual date, duration, direction, and summary counts.
+- **Green Call** still calls the selected number, from the recent-calls screen or the history timeline.
+- On the number-history screen, grant **Audio** access when prompted to display and directly play native PhoneRecord recordings. Recording matching uses a timestamp window because the original MediaTek filenames do not contain the caller's number.
+- The dialpad can suggest previously called unsaved numbers after typing two digits (arrow keys then OK/green to dial).
+- NovaDial-inspired indexed contact lookups avoid repeated full-contact scans while rebuilding call history.
+- App ID: `com.r77pro.phone`. Manual workflow produces a non-debuggable release APK; to install upgrades without uninstalling, configure a **persistent signing key**.
+
+The original MediaTek recording files are never renamed or modified by this version. The number/history link and audio playback are new features that need testing on the actual phone. No builds run automatically.
+
 ## Using it with the keys
 
 ### Call history, contacts, favorites
@@ -32,7 +44,7 @@ starts at its first row.
 | --- | --- |
 | **0–9** | Start dialing a number with that digit |
 | **Call** (green key) | Call the selected call or contact (nothing selected: the dialer) |
-| **OK** | Call history: call back · Contacts: open the contact in DumberKit Contacts |
+| **OK** | Call history: open all calls with that number · Contacts: open the contact in DumberKit Contacts |
 | **Hold OK** | Actions: call, send SMS, add to / remove from favorites, edit, block, delete… |
 | **#** | Send an SMS to the selected number or contact |
 | **\*** or the **Ab** button | Jump to a letter in the contacts (A–Z grid, the keys 2–9 jump like on the keypad) |
