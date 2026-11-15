@@ -10,6 +10,8 @@
     <string name="dpad_about_license_title">License</string>
     <string name="dpad_about_license">Free and open source software under the GNU General Public License v3.0. No ads, no tracking.</string>
     <string name="dpad_about_description">Customized for the DOOV R77 Pro: physical keypad and D-pad calling, contacts, call history, and native MediaTek call recording. Based on DumberKit Phone and Fossify Phone.</string>
+    <string name="dpad_previously_dialed">Previously dialed</string>
+    <string name="dpad_dial_previous_number">Call previous number %1$s</string>
     <string name="dpad_jump_to_letter">Jump to letter</string>
     <string name="dpad_key_ok" translatable="false">OK</string>
     <string name="dpad_key_up_down" translatable="false">↑ / ↓</string>
