@@ -53,6 +53,32 @@
         android:textSize="@dimen/dpad_dial_name_text_size"
         android:visibility="gone" />
 
+    <!-- Focusable suggestions from outgoing call history; no software keyboard needed. -->
+    <LinearLayout
+        android:id="@+id/dialpad_recent_holder"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/dialpad_recent_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="@dimen/activity_margin"
+            android:paddingTop="@dimen/small_margin"
+            android:paddingEnd="@dimen/activity_margin"
+            android:paddingBottom="@dimen/small_margin"
+            android:text="@string/dpad_previously_dialed"
+            android:focusable="false" />
+
+        <LinearLayout
+            android:id="@+id/dialpad_recent_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </LinearLayout>
+
     <View
         android:id="@+id/dialpad_divider"
         android:layout_width="match_parent"
