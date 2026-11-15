@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/number_history_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/number_history_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="@dimen/activity_margin"
+        android:paddingTop="@dimen/activity_margin"
+        android:paddingEnd="@dimen/activity_margin"
+        android:ellipsize="end"
+        android:singleLine="true"
+        android:textSize="23sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/number_history_number"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="@dimen/activity_margin"
+        android:paddingEnd="@dimen/activity_margin"
+        android:textSize="16sp" />
+
+    <TextView
+        android:id="@+id/number_history_stats"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="@dimen/activity_margin"
+        android:paddingTop="@dimen/small_margin"
+        android:paddingEnd="@dimen/activity_margin"
+        android:paddingBottom="@dimen/small_margin"
+        android:textSize="14sp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:alpha="0.25"
+        android:background="?android:attr/textColorPrimary" />
+
+    <TextView
+        android:id="@+id/number_history_placeholder"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="@dimen/activity_margin"
+        android:text="@string/dpad_history_loading"
+        android:textSize="16sp" />
+
+    <org.fossify.commons.views.MyRecyclerView
+        android:id="@+id/number_history_list"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:scrollbars="none"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+
+    <TextView
+        android:id="@+id/number_history_hint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="@dimen/small_margin"
+        android:text="@string/dpad_history_hint"
+        android:textSize="13sp" />
+</LinearLayout>
