@@ -63,6 +63,12 @@
                 <data android:mimeType="vnd.android.cursor.dir/calls" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <!-- On keypad phones Android's physical green Call key often fires this intent. -->
+            <intent-filter>
+                <action android:name="android.intent.action.CALL_BUTTON" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
         </activity>
 
         <activity
