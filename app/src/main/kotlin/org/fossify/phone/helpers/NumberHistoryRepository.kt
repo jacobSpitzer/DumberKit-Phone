@@ -10,7 +10,6 @@ import android.provider.MediaStore
 import android.telephony.PhoneNumberUtils
 import android.util.Log
 import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 /** One real call-log row, never a synthetic grouping. */
@@ -55,9 +54,7 @@ object NumberHistoryRepository {
                 val type = cursor.getColumnIndexOrThrow(CallLog.Calls.TYPE)
                 while (cursor.moveToNext()) {
                     val candidate = cursor.getString(number).orEmpty()
-                    if (candidate.isNotBlank() &&
-                        (candidate == requestedNumber || PhoneNumberUtils.compare(candidate, requestedNumber))
-                    ) {
+                    if (candidate.isNotBlank() && samePhoneNumber(candidate, requestedNumber)) {
                         result += NumberHistoryEntry(
                             id = cursor.getLong(id),
                             number = candidate,
@@ -72,6 +69,15 @@ object NumberHistoryRepository {
             Log.w(TAG, "Could not read call log", e)
         }
         return result
+    }
+
+    private fun samePhoneNumber(a: String, b: String): Boolean {
+        val x = PhoneNumberUtils.normalizeNumber(a).filter(Char::isDigit)
+        val y = PhoneNumberUtils.normalizeNumber(b).filter(Char::isDigit)
+        if (x.isEmpty() || y.isEmpty()) return false
+        // Require at least 9 matching digits to avoid the Android API's loose
+        // seven-digit comparison accidentally merging different numbers.
+        return x == y || (x.length >= 9 && y.length >= 9 && x.takeLast(9) == y.takeLast(9))
     }
 
     fun canReadAudio(context: Context): Boolean {
