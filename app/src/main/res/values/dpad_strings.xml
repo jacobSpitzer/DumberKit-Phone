@@ -48,7 +48,7 @@
     <string name="dpad_about_main">Call history, contacts, favorites</string>
     <string name="dpad_key_main_left_right">Switch the tabs: call history, contacts, favorites</string>
     <string name="dpad_key_main_digits">Start dialing a number</string>
-    <string name="dpad_key_main_ok">History: call back · Contacts: open the contact</string>
+    <string name="dpad_key_main_ok">History: show complete number history · Contacts: open the contact</string>
     <string name="dpad_key_main_ok_hold">Actions: send SMS, favorites, edit, block, delete…</string>
     <string name="dpad_key_main_call">Call the selected number or contact (nothing selected: dialing)</string>
     <string name="dpad_key_main_pound">Send an SMS to the selected number or contact</string>
