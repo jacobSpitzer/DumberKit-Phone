@@ -65,7 +65,7 @@ android {
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".debug"
+            // Keep the package ID identical to the original app for keypad/dialer testing.
         }
         release {
             isMinifyEnabled = true
