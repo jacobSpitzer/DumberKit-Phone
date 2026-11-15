@@ -341,6 +341,25 @@
 
             </RelativeLayout>
 
+            <!-- One-time access to the native MediaTek PhoneRecord folder for file naming. -->
+            <RelativeLayout
+                android:id="@+id/settings_recording_naming_holder"
+                style="@style/SettingsHolderSwitchStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/settings_recording_naming_label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="@dimen/dpad_settings_row_height"
+                    android:paddingStart="@dimen/activity_margin"
+                    android:paddingEnd="@dimen/activity_margin"
+                    android:text="@string/dpad_recording_folder_setup"
+                    android:textSize="@dimen/dpad_detail_text_size" />
+            </RelativeLayout>
+
             <RelativeLayout
                 android:id="@+id/settings_show_call_confirmation_holder"
                 style="@style/SettingsHolderSwitchStyle"
