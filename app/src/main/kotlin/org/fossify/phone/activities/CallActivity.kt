@@ -40,6 +40,8 @@ import org.fossify.phone.models.AudioRoute
 import org.fossify.phone.models.CallContact
 import org.fossify.phone.receivers.ScreenOffAdminReceiver
 import org.fossify.phone.recording.MtkCallRecordingController
+import org.fossify.phone.recording.RecordingNames
+import org.fossify.commons.helpers.ensureBackgroundThread
 
 /**
  * The call screen for keypad phones. Ringing: Call / OK / ← answer, End / → decline, Back silences the ringing and
@@ -773,10 +775,29 @@ class CallActivity : SimpleActivity() {
         val error = MtkCallRecordingController.request(CallManager.getPrimaryCall(), start)
         if (error == null) {
             recordingRequested = start
+            if (start) {
+                val currentNumber = callContact?.number?.takeIf { it.isNotBlank() }
+                    ?: CallManager.getPrimaryCall()?.details?.handle?.schemeSpecificPart.orEmpty()
+                val displayName = callContact?.name?.takeIf { it.isNotBlank() } ?: currentNumber
+                RecordingNames.markStart(this, currentNumber, displayName)
+            } else {
+                RecordingNames.markStop(this)
+                scheduleRecordingRename()
+            }
             setRowActive(binding.callRecord, recordingRequested)
             toast(if (start) R.string.dpad_record_request_sent else R.string.dpad_record_stop_sent)
         } else {
             toast(R.string.dpad_record_request_failed)
+        }
+    }
+
+    /** The OEM finishes saving audio asynchronously; retry without blocking the call UI. */
+    private fun scheduleRecordingRename() {
+        val appContext = applicationContext
+        listOf(2_500L, 7_000L, 15_000L).forEach { delay ->
+            Handler(Looper.getMainLooper()).postDelayed({
+                ensureBackgroundThread { RecordingNames.renamePending(appContext) }
+            }, delay)
         }
     }
 
@@ -796,6 +817,8 @@ class CallActivity : SimpleActivity() {
     private fun endCall() {
         if (recordingRequested) {
             MtkCallRecordingController.request(CallManager.getPrimaryCall(), start = false)
+            RecordingNames.markStop(this)
+            scheduleRecordingRename()
             recordingRequested = false
         }
         CallManager.reject()
