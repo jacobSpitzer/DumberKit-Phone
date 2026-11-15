@@ -68,8 +68,11 @@ android {
             // Keep the package ID identical to the original app for keypad/dialer testing.
         }
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // Keep production APK non-debuggable, but disable R8 until the customized
+            // DOOV code and Commons reflection dependencies are proven release-safe.
+            // This also preserves original class/method names in Android crash logs.
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
