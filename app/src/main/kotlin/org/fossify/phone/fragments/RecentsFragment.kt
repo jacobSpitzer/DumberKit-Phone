@@ -29,6 +29,8 @@ import org.fossify.phone.extensions.startCallWithConfirmationCheck
 import org.fossify.phone.extensions.startContactDetailsIntent
 import org.fossify.phone.helpers.RecentsCache
 import org.fossify.phone.helpers.RecentsHelper
+import org.fossify.phone.helpers.NumberHistoryRepository
+import org.fossify.phone.helpers.NumberHistoryEntry
 import org.fossify.phone.interfaces.RefreshItemsListener
 import org.fossify.phone.models.CallLogItem
 import org.fossify.phone.models.RecentCall
@@ -40,6 +42,8 @@ class RecentsFragment(
     private lateinit var binding: FragmentRecentsBinding
     private var allRecentCalls = listOf<CallLogItem>()
     private var recentsAdapter: RecentCallsAdapter? = null
+    private var recordingScanGeneration = 0
+    private var lastRecordingScanAt = 0L
 
     private var searchQuery: String? = null
     private var recentsHelper = RecentsHelper(context)
@@ -197,6 +201,27 @@ class RecentsFragment(
                 recentsAdapter?.updateItems(recents)
             } else {
                 recentsAdapter?.updateItems(recents)
+            }
+            refreshRecordingIndicators(recents)
+        }
+    }
+
+    private fun refreshRecordingIndicators(recents: List<CallLogItem>) {
+        if (!NumberHistoryRepository.canReadAudio(context)) return
+        val now = System.currentTimeMillis()
+        // One scan per refresh burst, not every time a cached set of contact names appears.
+        if (now - lastRecordingScanAt < 5_000L) return
+        lastRecordingScanAt = now
+        val generation = ++recordingScanGeneration
+        val calls = recents.filterIsInstance<RecentCall>()
+            .flatMap { it.groupedCalls ?: listOf(it) }
+            .distinctBy { it.id }
+            .map { NumberHistoryEntry(it.id.toLong(), it.phoneNumber, it.startTS, it.duration.toLong(), it.type) }
+        ensureBackgroundThread {
+            val files = NumberHistoryRepository.queryRecordings(context)
+            val recorded = NumberHistoryRepository.associate(calls, files).keys.map(Long::toInt).toSet()
+            activity?.runOnUiThread {
+                if (generation == recordingScanGeneration) recentsAdapter?.updateRecordedCallIds(recorded)
             }
         }
     }
