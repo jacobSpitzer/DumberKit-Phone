@@ -1,6 +1,6 @@
 package org.fossify.phone.helpers
 
-import org.fossify.commons.extensions.normalizeString
+import org.fossify.commons.extensions.*
 import org.fossify.commons.helpers.KeypadHelper
 import org.fossify.commons.models.contacts.Contact
 
