@@ -86,6 +86,10 @@
     <string name="dpad_add_wait">Add a wait (;)</string>
     <string name="dpad_speaker">Speaker</string>
     <string name="dpad_mute">Mute</string>
+    <string name="dpad_recording_folder_setup">Name call recordings (choose PhoneRecord)</string>
+    <string name="dpad_recording_folder_ready">Recording names enabled (PhoneRecord)</string>
+    <string name="dpad_recording_folder_invalid">Choose the PhoneRecord folder in internal storage</string>
+    <string name="dpad_recording_folder_saved">PhoneRecord access granted; new recordings will include contact or number</string>
     <string name="dpad_record_start">Record</string>
     <string name="dpad_record_stop">Stop recording</string>
     <string name="dpad_record_request_sent">Recording started</string>
