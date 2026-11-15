@@ -1,9 +1,11 @@
 package org.fossify.phone.activities
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.Bundle
 import android.os.Handler
@@ -53,6 +55,7 @@ class CallActivity : SimpleActivity() {
         private const val SHADE_CHECK_DELAY_MS = 150L
         private const val SCREEN_OFF_AFTER_MS = 2_000L
         private const val WAKE_KEY_GRACE_MS = 700L
+        private const val REQUEST_RECORD_AUDIO = 5021
 
         fun getStartIntent(context: Context): Intent {
             val openAppIntent = Intent(context, CallActivity::class.java)
@@ -751,27 +754,48 @@ class CallActivity : SimpleActivity() {
     }
 
     /**
-     * Manual recording experiment. These MediaTek action strings are present in DOOV Telecom,
-     * but our non-privileged APK cannot know whether an exported receiver actually honored them.
-     * The UI must not claim success without checking the saved call recording on the phone.
+     * Match the OEM stock dialer: dispatch the MediaTek call event on the current Call.
+     * A successful dispatch is not proof of actual recording. Check the device recording file.
      */
     private fun toggleRecordingRequest() {
         if (isCallEnded || CallManager.getState() != Call.STATE_ACTIVE) return
 
-        val starting = !recordingRequested
-        val error = MtkCallRecordingController.request(this, start = starting)
+        // Telecom's native MediaTek recording path checks RECORD_AUDIO on the caller.
+        if (!recordingRequested && checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_RECORD_AUDIO)
+            return
+        }
+
+        submitRecordingRequest(start = !recordingRequested)
+    }
+
+    private fun submitRecordingRequest(start: Boolean) {
+        val error = MtkCallRecordingController.request(CallManager.getPrimaryCall(), start)
         if (error == null) {
-            recordingRequested = starting
+            recordingRequested = start
             setRowActive(binding.callRecord, recordingRequested)
-            toast(if (starting) R.string.dpad_record_request_sent else R.string.dpad_record_stop_sent)
+            toast(if (start) R.string.dpad_record_request_sent else R.string.dpad_record_stop_sent)
         } else {
             toast(R.string.dpad_record_request_failed)
         }
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_RECORD_AUDIO) {
+            if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED &&
+                !isCallEnded && CallManager.getState() == Call.STATE_ACTIVE
+            ) {
+                submitRecordingRequest(start = true)
+            } else {
+                toast(R.string.dpad_record_permission_denied)
+            }
+        }
+    }
+
     private fun endCall() {
         if (recordingRequested) {
-            MtkCallRecordingController.request(this, start = false)
+            MtkCallRecordingController.request(CallManager.getPrimaryCall(), start = false)
             recordingRequested = false
         }
         CallManager.reject()
