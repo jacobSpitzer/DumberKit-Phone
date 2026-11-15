@@ -149,6 +149,7 @@
 
         <activity
             android:name=".activities.NumberHistoryActivity"
+            android:screenOrientation="portrait"
             android:exported="false"
             android:label="@string/dpad_history_title"
             android:parentActivityName=".activities.MainActivity" />
