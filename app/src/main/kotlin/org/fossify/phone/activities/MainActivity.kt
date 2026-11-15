@@ -133,6 +133,12 @@ class MainActivity : SimpleActivity() {
         binding.viewPager.descendantFocusability = ViewGroup.FOCUS_BEFORE_DESCENDANTS
         binding.viewPager.requestFocus()
         focusListAtStart()
+
+        // A physical green Call key on the launcher sends ACTION_CALL_BUTTON on many ROMs.
+        // Open the keypad directly instead of showing the call history first.
+        if (savedInstanceState == null && intent.action == Intent.ACTION_CALL_BUTTON) {
+            launchDialpad()
+        }
     }
 
     override fun onResume() {
