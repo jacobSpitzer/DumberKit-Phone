@@ -88,6 +88,14 @@ class RecentCallsAdapter(
     private var missedCallColor = resources.getColor(R.color.color_missed_call)
     private var secondaryTextColor = textColor.adjustAlpha(0.6f)
     private var textToHighlight = ""
+    private var recordedCallIds: Set<Int> = emptySet()
+
+    /** Recording lookup is computed asynchronously by RecentsFragment, never while binding rows. */
+    fun updateRecordedCallIds(ids: Set<Int>) {
+        if (recordedCallIds == ids) return
+        recordedCallIds = ids
+        notifyDataSetChanged()
+    }
     private var durationPadding = resources.getDimension(R.dimen.normal_margin).toInt()
     private var phoneNumberUtilInstance: PhoneNumberUtil = PhoneNumberUtil.getInstance()
     private var phoneNumberOfflineGeocoderInstance: PhoneNumberOfflineGeocoder = PhoneNumberOfflineGeocoder.getInstance()
@@ -619,6 +627,11 @@ class RecentCallsAdapter(
                 }
 
                 itemRecentsType.setImageDrawable(drawable)
+                itemRecentsRecordingIcon.beVisibleIf(
+                    call.id in recordedCallIds ||
+                        call.groupedCalls?.any { it.id in recordedCallIds } == true
+                )
+                itemRecentsRecordingIcon.setColorFilter(activity.getProperPrimaryColor())
 
                 overflowMenuIcon.beVisibleIf(showOverflowMenu)
                 overflowMenuIcon.drawable.apply {
