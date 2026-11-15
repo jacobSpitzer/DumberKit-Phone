@@ -5,10 +5,12 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.provider.DocumentsContract
 import android.provider.CallLog
 import android.provider.MediaStore
 import android.telephony.PhoneNumberUtils
 import android.util.Log
+import org.fossify.phone.recording.RecordingNames
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -81,6 +83,7 @@ object NumberHistoryRepository {
     }
 
     fun canReadAudio(context: Context): Boolean {
+        if (RecordingNames.folderUri(context) != null) return true
         val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             Manifest.permission.READ_MEDIA_AUDIO
         } else {
@@ -96,6 +99,34 @@ object NumberHistoryRepository {
      */
     fun queryRecordings(context: Context): List<NativeCallRecording> {
         if (!canReadAudio(context)) return emptyList()
+        // A user-granted PhoneRecord SAF tree is more reliable than MediaStore indexing,
+        // particularly on DOOV firmware where native recordings may be hidden from
+        // third-party MediaStore queries.
+        RecordingNames.folderUri(context)?.let { tree ->
+            try {
+                val folderItems = ArrayList<NativeCallRecording>()
+                val children = DocumentsContract.buildChildDocumentsUriUsingTree(
+                    tree, DocumentsContract.getTreeDocumentId(tree)
+                )
+                context.contentResolver.query(children, arrayOf(
+                    DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    DocumentsContract.Document.COLUMN_LAST_MODIFIED
+                ), null, null, null)?.use { cursor ->
+                    while (cursor.moveToNext()) {
+                        val name = cursor.getString(1).orEmpty()
+                        if (!isSupportedAudio(name)) continue
+                        val timestamp = recordingTimestamp(name)
+                            ?: cursor.getLong(2).takeIf { it > 0 } ?: continue
+                        val file = DocumentsContract.buildDocumentUriUsingTree(tree, cursor.getString(0))
+                        folderItems += NativeCallRecording(file, name, timestamp)
+                    }
+                }
+                if (folderItems.isNotEmpty()) return folderItems
+            } catch (e: Exception) {
+                Log.w(TAG, "PhoneRecord folder not readable, checking MediaStore", e)
+            }
+        }
         val result = ArrayList<NativeCallRecording>()
         try {
             val columns = arrayOf(
@@ -116,12 +147,7 @@ object NumberHistoryRepository {
                 val addedIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED)
                 while (cursor.moveToNext()) {
                     val name = cursor.getString(nameIndex).orEmpty()
-                    if (!name.endsWith(".aac", true) &&
-                        !name.endsWith(".amr", true) &&
-                        !name.endsWith(".3gpp", true) &&
-                        !name.endsWith(".3gp", true) &&
-                        !name.endsWith(".m4a", true)
-                    ) continue
+                    if (!isSupportedAudio(name)) continue
                     val timestamp = recordingTimestamp(name)
                         ?: cursor.getLong(addedIndex) * 1000L
                     val uri = android.content.ContentUris.withAppendedId(
@@ -136,6 +162,9 @@ object NumberHistoryRepository {
         }
         return result
     }
+
+    private fun isSupportedAudio(name: String): Boolean =
+        listOf(".aac", ".amr", ".3gpp", ".3gp", ".m4a").any { name.endsWith(it, true) }
 
     private fun recordingTimestamp(fileName: String): Long? {
         // Example native DOOV filename: 2026-11-15_21.43.57.aac
