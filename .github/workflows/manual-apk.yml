@@ -65,5 +65,5 @@ jobs:
             release/DumberKit-Phone-debug.apk \
             --target "$GITHUB_SHA" \
             --title "DumberKit Phone manual build ${GITHUB_RUN_NUMBER}" \
-            --notes 'Debug build for device testing; recording is not yet implemented.' \
+            --notes 'DOOV R77 Pro test: physical Call key and experimental MediaTek Record/Stop requests. Native recording is not yet verified. Debug build; signature may differ from previous manual build.' \
             --prerelease
