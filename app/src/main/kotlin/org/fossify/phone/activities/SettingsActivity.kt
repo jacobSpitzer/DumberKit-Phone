@@ -523,17 +523,19 @@ class SettingsActivity : SimpleActivity() {
      * Keypad phones: a compact top bar, the focus frame on every row, About as the last row, and no rows for things
      * this app does its own way (it always starts on the call history, there's no on-screen dialpad and no swiping).
      */
-    private fun setupRecordingFolder(): Unit = binding.apply {
-        settingsRecordingNamingLabel.setText(
-            if (RecordingNames.folderUri(this@SettingsActivity) != null) {
-                R.string.dpad_recording_folder_ready
-            } else {
-                R.string.dpad_recording_folder_setup
+    private fun setupRecordingFolder() {
+        binding.apply {
+            settingsRecordingNamingLabel.setText(
+                if (RecordingNames.folderUri(this@SettingsActivity) != null) {
+                    R.string.dpad_recording_folder_ready
+                } else {
+                    R.string.dpad_recording_folder_setup
+                }
+            )
+            settingsRecordingNamingHolder.setOnClickListener {
+                // Android grants access to this folder only after user selection.
+                selectPhoneRecordFolder.launch(null)
             }
-        )
-        settingsRecordingNamingHolder.setOnClickListener {
-            // Android grants access to this folder only after user selection.
-            selectPhoneRecordFolder.launch(null)
         }
     }
 
