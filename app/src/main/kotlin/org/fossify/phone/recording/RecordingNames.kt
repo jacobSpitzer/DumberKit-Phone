@@ -146,19 +146,20 @@ object RecordingNames {
             val number = session.optString("number")
             val name = session.optString("name")
             if (started <= 0 || now - started > MAX_SESSION_AGE_MS) continue
-            if (stopped <= started || number.isBlank()) {
+            // Wait until the OEM has closed its audio file before changing its name.
+            if (stopped <= started || number.isBlank() || now - stopped < 5_000L) {
                 keep.add(session)
                 continue
             }
-            // Require the original recording-start timestamp to be near our own Record event.
-            // Never infer a caller from an arbitrary nearby call in the call log.
+            // Only associate an original timestamped OEM file with the known start
+            // event for THIS call. Ambiguous timestamps are deliberately left alone.
             val candidates = files.filter {
                 it.time in (started - 12_000L)..(started + 35_000L)
-            }
-            val file = candidates.minByOrNull { abs(it.time - started) }
-            if (file == null || candidates.size > 1 &&
-                abs(candidates[0].time - started) == abs(candidates[1].time - started)
-            ) {
+            }.sortedBy { abs(it.time - started) }
+            val file = candidates.firstOrNull()
+            val ambiguous = candidates.size > 1 &&
+                abs(candidates[1].time - started) - abs(candidates[0].time - started) < 2_500L
+            if (file == null || ambiguous) {
                 keep.add(session)
                 continue
             }
