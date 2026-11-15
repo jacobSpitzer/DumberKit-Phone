@@ -132,8 +132,38 @@ class RecentsHelper(private val context: Context) {
     ): List<RecentCall> {
         val recentCalls = mutableListOf<RecentCall>()
         var previousStartTS = 0L
-        val contactsNumbersMap = HashMap<String, String>()
-        val contactPhotosMap = HashMap<String, String>()
+        // NovaDial-style precomputed contact lookup: one pass through all saved numbers.
+        // Ambiguous nine-digit suffixes deliberately fall back to the call-log's own name,
+        // rather than attributing a call to the wrong contact.
+        val contactsByExactNumber = HashMap<String, Contact>()
+        val contactsBySuffix = HashMap<String, Contact>()
+        val ambiguousSuffixes = HashSet<String>()
+        contacts.forEach { contact ->
+            contact.phoneNumbers.forEach { phone ->
+                listOf(phone.value, phone.normalizedNumber).forEach { raw ->
+                    val normalized = PhoneNumberUtils.normalizeNumber(raw).filter(Char::isDigit)
+                    if (normalized.isNotBlank()) {
+                        contactsByExactNumber.putIfAbsent(normalized, contact)
+                        if (normalized.length >= COMPARABLE_PHONE_NUMBER_LENGTH) {
+                            val suffix = normalized.takeLast(COMPARABLE_PHONE_NUMBER_LENGTH)
+                            val old = contactsBySuffix.putIfAbsent(suffix, contact)
+                            if (old != null && old.contactId != contact.contactId) {
+                                ambiguousSuffixes.add(suffix)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        fun findIndexedContact(raw: String): Contact? {
+            val normalized = PhoneNumberUtils.normalizeNumber(raw).filter(Char::isDigit)
+            if (normalized.isBlank()) return null
+            contactsByExactNumber[normalized]?.let { return it }
+            if (normalized.length < COMPARABLE_PHONE_NUMBER_LENGTH) return null
+            val suffix = normalized.takeLast(COMPARABLE_PHONE_NUMBER_LENGTH)
+            return if (suffix in ambiguousSuffixes) null else contactsBySuffix[suffix]
+        }
 
         val projection = arrayOf(
             Calls._ID,
@@ -195,27 +225,9 @@ class RecentsHelper(private val context: Context) {
                     name = number.orEmpty()
                 }
 
-                if (name == number && !isUnknownNumber) {
-                    if (contactsNumbersMap.containsKey(number)) {
-                        name = contactsNumbersMap[number]!!
-                    } else {
-                        val normalizedNumber = number.normalizePhoneNumber()
-                        if (normalizedNumber!!.length >= COMPARABLE_PHONE_NUMBER_LENGTH) {
-                            name = contacts.filter { it.phoneNumbers.isNotEmpty() }.firstOrNull { contact ->
-                                val curNumber = contact.phoneNumbers.first().normalizedNumber
-                                if (curNumber.length >= COMPARABLE_PHONE_NUMBER_LENGTH) {
-                                    if (curNumber.substring(curNumber.length - COMPARABLE_PHONE_NUMBER_LENGTH) == normalizedNumber.substring(
-                                            normalizedNumber.length - COMPARABLE_PHONE_NUMBER_LENGTH
-                                        )
-                                    ) {
-                                        contactsNumbersMap[number] = contact.getNameToDisplay()
-                                        return@firstOrNull true
-                                    }
-                                }
-                                false
-                            }?.name ?: number
-                        }
-                    }
+                val indexedContact = if (!isUnknownNumber) findIndexedContact(number.orEmpty()) else null
+                if (name == number && indexedContact != null) {
+                    name = indexedContact.getNameToDisplay()
                 }
 
                 if (name.isEmpty() || name == "-1") {
@@ -223,16 +235,8 @@ class RecentsHelper(private val context: Context) {
                 }
 
                 var photoUri = cursor.getStringValue(Calls.CACHED_PHOTO_URI) ?: ""
-                if (photoUri.isEmpty() && !number.isNullOrEmpty()) {
-                    if (contactPhotosMap.containsKey(number)) {
-                        photoUri = contactPhotosMap[number]!!
-                    } else {
-                        val contact = contacts.firstOrNull { it.doesHavePhoneNumber(number) }
-                        if (contact != null) {
-                            photoUri = contact.photoUri
-                            contactPhotosMap[number] = contact.photoUri
-                        }
-                    }
+                if (photoUri.isEmpty() && indexedContact != null) {
+                    photoUri = indexedContact.photoUri
                 }
 
                 val startTS = cursor.getLongValue(Calls.DATE)
