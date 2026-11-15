@@ -65,6 +65,8 @@ import org.fossify.phone.extensions.canLaunchAccountsConfiguration
 import org.fossify.phone.extensions.config
 import org.fossify.phone.extensions.launchAccountsConfiguration
 import org.fossify.phone.helpers.RecentsHelper
+import org.fossify.phone.recording.RecordingNames
+import org.fossify.commons.helpers.ensureBackgroundThread
 import org.fossify.phone.models.RecentCall
 import java.util.Locale
 import kotlin.system.exitProcess
@@ -82,6 +84,18 @@ class SettingsActivity : SimpleActivity() {
     }
 
     private val binding by viewBinding(ActivitySettingsBinding::inflate)
+
+    private val selectPhoneRecordFolder =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+            if (uri == null) return@registerForActivityResult
+            if (RecordingNames.useFolder(this, uri)) {
+                toast(R.string.dpad_recording_folder_saved)
+                setupRecordingFolder()
+                ensureBackgroundThread { RecordingNames.renamePending(applicationContext) }
+            } else {
+                toast(R.string.dpad_recording_folder_invalid)
+            }
+        }
     private val getContent =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri != null) {
@@ -129,6 +143,7 @@ class SettingsActivity : SimpleActivity() {
         setupOnContactClick()
         setupDialPadOpen()
         setupGroupSubsequentCalls()
+        setupRecordingFolder()
         setupStartNameWithSurname()
         setupTouchInput()
         setupScreenOff()
@@ -507,6 +522,20 @@ class SettingsActivity : SimpleActivity() {
      * Keypad phones: a compact top bar, the focus frame on every row, About as the last row, and no rows for things
      * this app does its own way (it always starts on the call history, there's no on-screen dialpad and no swiping).
      */
+    private fun setupRecordingFolder() = binding.apply {
+        settingsRecordingNamingLabel.setText(
+            if (RecordingNames.folderUri(this@SettingsActivity) != null) {
+                R.string.dpad_recording_folder_ready
+            } else {
+                R.string.dpad_recording_folder_setup
+            }
+        )
+        settingsRecordingNamingHolder.setOnClickListener {
+            // Android grants access to this folder only after user selection.
+            selectPhoneRecordFolder.launch(null)
+        }
+    }
+
     private fun setupForKeys() = binding.apply {
         dpadCompactTopBar(settingsAppbar, settingsNestedScrollview)
         settingsToolbar.menu.clear()
