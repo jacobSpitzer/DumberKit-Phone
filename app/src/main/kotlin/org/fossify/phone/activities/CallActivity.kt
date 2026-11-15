@@ -37,6 +37,7 @@ import org.fossify.phone.helpers.*
 import org.fossify.phone.models.AudioRoute
 import org.fossify.phone.models.CallContact
 import org.fossify.phone.receivers.ScreenOffAdminReceiver
+import org.fossify.phone.recording.MtkCallRecordingController
 
 /**
  * The call screen for keypad phones. Ringing: Call / OK / ← answer, End / → decline, Back silences the ringing and
@@ -73,11 +74,11 @@ class CallActivity : SimpleActivity() {
     private var dtmfTyped = ""
     private val callDurationHandler = Handler(Looper.getMainLooper())
 
-    private val rows get() = with(binding) { listOf(callToggleSpeaker, callToggleMicrophone, callToggleHold, callAdd, callSwap, callMerge, callManage, callEnd) }
+    private val rows get() = with(binding) { listOf(callToggleSpeaker, callToggleMicrophone, callToggleHold, callAdd, callSwap, callMerge, callManage, callRecord, callEnd) }
     private val rowIcons get() = with(binding) {
         mapOf(
             callToggleSpeaker to callToggleSpeakerIcon, callToggleMicrophone to callToggleMicrophoneIcon, callToggleHold to callToggleHoldIcon,
-            callAdd to callAddIcon, callSwap to callSwapIcon, callMerge to callMergeIcon, callManage to callManageIcon, callEnd to callEndIcon
+            callAdd to callAddIcon, callSwap to callSwapIcon, callMerge to callMergeIcon, callManage to callManageIcon, callRecord to callRecordIcon, callEnd to callEndIcon
         )
     }
 
@@ -85,6 +86,8 @@ class CallActivity : SimpleActivity() {
     private val activeRows = mutableSetOf<View>()
     private var holdLabel = R.string.hold_call
     private var speakerState = ""
+    // Tracks our own request, NOT confirmed native recording state.
+    private var recordingRequested = false
 
     // a long call dims the screen (Android turns it off after the phone's screen timeout), Back or green lights it up
     private val dimHandler = Handler(Looper.getMainLooper())
@@ -219,6 +222,7 @@ class CallActivity : SimpleActivity() {
         callManage.setOnClickListener {
             startActivity(Intent(this@CallActivity, ConferenceActivity::class.java))
         }
+        callRecord.setOnClickListener { toggleRecordingRequest() }
         callEnd.setOnClickListener { endCall() }
     }
 
@@ -271,6 +275,7 @@ class CallActivity : SimpleActivity() {
             callToggleSpeaker -> "${callToggleSpeaker.contentDescription}: $speakerState"
             callToggleMicrophone -> "${getString(R.string.dpad_mute)}: ${onOff(callToggleMicrophone)}"
             callToggleHold -> getString(holdLabel)
+            callRecord -> getString(if (recordingRequested) R.string.dpad_record_stop else R.string.dpad_record_start)
             else -> focused.contentDescription
         }
     }
@@ -629,6 +634,7 @@ class CallActivity : SimpleActivity() {
             callManage.beVisibleIf(!isCallEnded && call.hasCapability(Call.Details.CAPABILITY_MANAGE_CONFERENCE))
             setRowEnabled(callSwap, enabled = !isCallEnded && state == Call.STATE_ACTIVE)
             setRowEnabled(callMerge, enabled = !isCallEnded && state == Call.STATE_ACTIVE)
+            setRowEnabled(callRecord, enabled = !isCallEnded && state == Call.STATE_ACTIVE)
         }
     }
 
@@ -744,7 +750,30 @@ class CallActivity : SimpleActivity() {
         }
     }
 
+    /**
+     * Manual recording experiment. These MediaTek action strings are present in DOOV Telecom,
+     * but our non-privileged APK cannot know whether an exported receiver actually honored them.
+     * The UI must not claim success without checking the saved call recording on the phone.
+     */
+    private fun toggleRecordingRequest() {
+        if (isCallEnded || CallManager.getState() != Call.STATE_ACTIVE) return
+
+        val starting = !recordingRequested
+        val error = MtkCallRecordingController.request(this, start = starting)
+        if (error == null) {
+            recordingRequested = starting
+            setRowActive(binding.callRecord, recordingRequested)
+            toast(if (starting) R.string.dpad_record_request_sent else R.string.dpad_record_stop_sent)
+        } else {
+            toast(R.string.dpad_record_request_failed)
+        }
+    }
+
     private fun endCall() {
+        if (recordingRequested) {
+            MtkCallRecordingController.request(this, start = false)
+            recordingRequested = false
+        }
         CallManager.reject()
         disableProximitySensor()
 
