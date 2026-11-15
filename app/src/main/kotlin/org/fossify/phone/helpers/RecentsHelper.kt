@@ -87,41 +87,31 @@ class RecentsHelper(private val context: Context) {
         }
     }
 
-    private fun shouldGroupCalls(callA: RecentCall, callB: RecentCall): Boolean {
-        val differentSim = callA.simID != callB.simID
-        val differentDay = callA.dayCode != callB.dayCode
-        val namesAreBothRealAndDifferent =
-            callA.name != callB.name &&
-                    callA.name != callA.phoneNumber &&
-                    callB.name != callB.phoneNumber
-
-        if (differentSim || differentDay || namesAreBothRealAndDifferent) return false
-
-        @Suppress("DEPRECATION")
-        return PhoneNumberUtils.compare(callA.phoneNumber, callB.phoneNumber)
-    }
-
+    /**
+     * NovaDial-style full-number grouping, across days and SIM slots, with linear-time
+     * indexing. The existing setting still switches this on/off.
+     *
+     * Unknown/private callers are never merged, and grouping only affects the summary
+     * screen; opening a number always queries the complete ungrouped call history.
+     */
     private fun groupSubsequentCalls(calls: List<RecentCall>): List<RecentCall> {
-        val result = mutableListOf<RecentCall>()
-        if (calls.isEmpty()) return result
-
-        var currentCall = calls[0]
-        for (i in 1 until calls.size) {
-            val nextCall = calls[i]
-            if (shouldGroupCalls(currentCall, nextCall)) {
-                if (currentCall.groupedCalls.isNullOrEmpty()) {
-                    currentCall = currentCall.copy(groupedCalls = mutableListOf(currentCall))
-                }
-
-                currentCall.groupedCalls?.add(nextCall)
-            } else {
-                result += currentCall
-                currentCall = nextCall
+        val groups = LinkedHashMap<String, MutableList<RecentCall>>()
+        var unknownIndex = 0
+        for (call in calls.sortedByDescending { it.startTS }) {
+            val digits = PhoneNumberUtils.normalizeNumber(call.phoneNumber).filter(Char::isDigit)
+            val key = when {
+                call.isUnknownNumber || digits.isEmpty() -> "unknown:${unknownIndex++}"
+                digits.length >= COMPARABLE_PHONE_NUMBER_LENGTH ->
+                    "number:" + digits.takeLast(COMPARABLE_PHONE_NUMBER_LENGTH)
+                else -> "short:" + digits
             }
+            groups.getOrPut(key) { ArrayList() }.add(call.copy(groupedCalls = null))
         }
-
-        result.add(currentCall)
-        return result
+        return groups.values.map { group ->
+            val newest = group.first()
+            if (group.size == 1) newest
+            else newest.copy(groupedCalls = ArrayList(group))
+        }.sortedByDescending { it.startTS }
     }
 
     @SuppressLint("NewApi")
