@@ -237,17 +237,25 @@ class NumberHistoryActivity : SimpleActivity() {
     }
 
     private inner class HistoryAdapter : RecyclerView.Adapter<HistoryAdapter.HistoryHolder>() {
-        inner class HistoryHolder(val row: LinearLayout, val title: TextView, val subtitle: TextView)
-            : RecyclerView.ViewHolder(row)
+        inner class HistoryHolder(
+            val row: LinearLayout,
+            val icon: android.widget.ImageView,
+            val title: TextView,
+            val subtitle: TextView,
+            val playbackBadge: TextView
+        ) : RecyclerView.ViewHolder(row)
 
         override fun getItemCount() = calls.size
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): HistoryHolder {
-            val paddingX = (14 * resources.displayMetrics.density).toInt()
-            val paddingY = (10 * resources.displayMetrics.density).toInt()
+            val density = resources.displayMetrics.density
+            fun dp(value: Int) = (value * density).toInt()
+
             val row = LinearLayout(this@NumberHistoryActivity).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(paddingX, paddingY, paddingX, paddingY)
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(dp(12), dp(11), dp(12), dp(11))
+                minimumHeight = dp(68)
                 isFocusable = true
                 isClickable = true
                 applyDpadFocusHighlight()
@@ -256,9 +264,20 @@ class NumberHistoryActivity : SimpleActivity() {
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 )
             }
+            val icon = android.widget.ImageView(this@NumberHistoryActivity).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(25), dp(25)).apply {
+                    rightMargin = dp(12)
+                }
+                imageTintList = android.content.res.ColorStateList.valueOf(getProperPrimaryColor())
+            }
+            val textColumn = LinearLayout(this@NumberHistoryActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            }
             val title = TextView(this@NumberHistoryActivity).apply {
                 setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 17f)
                 setTextColor(getProperTextColor())
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
                 maxLines = 1
             }
             val subtitle = TextView(this@NumberHistoryActivity).apply {
@@ -267,9 +286,18 @@ class NumberHistoryActivity : SimpleActivity() {
                 alpha = 0.75f
                 maxLines = 1
             }
-            row.addView(title)
-            row.addView(subtitle)
-            return HistoryHolder(row, title, subtitle)
+            val playbackBadge = TextView(this@NumberHistoryActivity).apply {
+                setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 13f)
+                setTextColor(getProperPrimaryColor())
+                setPadding(dp(7), dp(5), dp(7), dp(5))
+                maxLines = 1
+            }
+            textColumn.addView(title)
+            textColumn.addView(subtitle)
+            row.addView(icon)
+            row.addView(textColumn)
+            row.addView(playbackBadge)
+            return HistoryHolder(row, icon, title, subtitle, playbackBadge)
         }
 
         override fun onBindViewHolder(holder: HistoryHolder, position: Int) {
@@ -277,15 +305,34 @@ class NumberHistoryActivity : SimpleActivity() {
             val recording = recordings[entry.id]
             val whenText = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
                 .format(Date(entry.startedAt))
-            val recorded = when {
-                recording == null -> ""
-                playingCallId == entry.id -> "  ■ ${getString(R.string.dpad_history_stop_playback)}"
-                else -> "  ▶ ${getString(R.string.dpad_history_play_recording)}"
-            }
-            holder.title.text = "${direction(entry.type)}$recorded"
+            holder.icon.setImageResource(when (entry.type) {
+                Calls.INCOMING_TYPE -> R.drawable.ic_call_received_vector
+                Calls.MISSED_TYPE -> R.drawable.ic_call_missed_vector
+                else -> R.drawable.ic_call_made_vector
+            })
+            holder.title.text = direction(entry.type)
             holder.subtitle.text = "$whenText · ${formatDuration(entry.durationSeconds)}"
-            holder.row.contentDescription = "${holder.title.text}, ${holder.subtitle.text}"
+            holder.playbackBadge.visibility = if (recording == null) View.GONE else View.VISIBLE
+            holder.playbackBadge.text = when {
+                recording == null -> ""
+                playingCallId == entry.id -> "■"
+                else -> "▶"
+            }
+            holder.row.contentDescription = buildString {
+                append(holder.title.text)
+                append(", ")
+                append(holder.subtitle.text)
+                if (recording != null) {
+                    append(", ")
+                    append(getString(if (playingCallId == entry.id) {
+                        R.string.dpad_history_stop_playback
+                    } else {
+                        R.string.dpad_history_play_recording
+                    }))
+                }
+            }
             holder.row.setOnClickListener { onEntryPressed(entry) }
         }
     }
+
 }
