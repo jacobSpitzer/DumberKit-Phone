@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  A call history row. DumberKit: plain nested LinearLayouts instead of Fossify's ConstraintLayout, whose ratio
+  Compact DOOV R77 call-history row: aligned identity, clear time/duration, and native recording icon. Plain LinearLayouts avoid ConstraintLayout's ratio
   constraints measured every row several times (~40 ms a row on a slow keypad phone, the history showed up late).
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -12,15 +12,16 @@
     android:focusable="true"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingTop="@dimen/medium_margin"
-    android:paddingBottom="@dimen/medium_margin">
+    android:minHeight="62dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="10dp">
 
     <ImageView
         android:id="@+id/item_recents_image"
         android:layout_width="@dimen/normal_icon_size"
         android:layout_height="@dimen/normal_icon_size"
         android:layout_marginStart="@dimen/normal_margin"
-        android:layout_marginEnd="@dimen/small_margin"
+        android:layout_marginEnd="@dimen/normal_margin"
         android:padding="@dimen/small_margin"
         android:src="@drawable/ic_person_vector" />
 
@@ -43,7 +44,8 @@
             android:singleLine="true"
             android:textAlignment="viewStart"
             android:textDirection="firstStrongLtr"
-            android:textSize="@dimen/bigger_text_size"
+            android:textSize="18sp"
+            android:textStyle="bold"
             tools:text="John Doe" />
 
         <LinearLayout
@@ -84,6 +86,15 @@
                 android:layout_height="@dimen/dpad_recents_small_icon_size"
                 android:padding="@dimen/tiny_margin"
                 android:src="@drawable/ic_call_missed_vector" />
+
+            <ImageView
+                android:id="@+id/item_recents_recording_icon"
+                android:layout_width="@dimen/dpad_recents_small_icon_size"
+                android:layout_height="@dimen/dpad_recents_small_icon_size"
+                android:layout_marginStart="3dp"
+                android:contentDescription="@string/dpad_history_play_recording"
+                android:src="@drawable/ic_record_dot_vector"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/item_recents_date_time"
