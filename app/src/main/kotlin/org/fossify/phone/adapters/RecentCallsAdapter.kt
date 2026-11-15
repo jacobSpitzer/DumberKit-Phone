@@ -50,6 +50,7 @@ import org.fossify.commons.models.contacts.Contact
 import org.fossify.commons.views.MyRecyclerView
 import org.fossify.phone.R
 import org.fossify.phone.activities.MainActivity
+import org.fossify.phone.activities.NumberHistoryActivity
 import org.fossify.phone.activities.SimpleActivity
 import org.fossify.phone.databinding.ItemRecentCallBinding
 import org.fossify.phone.databinding.ItemRecentsDateBinding
@@ -300,8 +301,7 @@ class RecentCallsAdapter(
 
     private fun showCallDetails() {
         val recentCall = getSelectedItems().firstOrNull() ?: return
-        val recentCalls = recentCall.groupedCalls ?: listOf(recentCall)
-        ShowGroupedCallsDialog(activity, recentCalls)
+        NumberHistoryActivity.open(activity, recentCall.phoneNumber, recentCall.name)
     }
 
     private fun copyNumber() {
