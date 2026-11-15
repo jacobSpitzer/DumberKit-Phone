@@ -91,7 +91,7 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:background="@null"
-                android:hint="@string/search"
+                android:hint="@string/dpad_t9_search_hint"
                 android:imeOptions="flagNoExtractUi|actionSearch"
                 android:inputType="textVisiblePassword|textNoSuggestions"
                 android:maxLines="1"
