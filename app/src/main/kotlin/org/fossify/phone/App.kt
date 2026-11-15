@@ -4,6 +4,7 @@ import android.app.Activity
 import org.fossify.commons.extensions.hasPermission
 import org.fossify.commons.helpers.PERMISSION_READ_CALL_LOG
 import org.fossify.phone.helpers.RecentsCache
+import org.fossify.phone.recording.RecordingNames
 import com.bumptech.glide.Glide
 import com.google.i18n.phonenumbers.PhoneNumberUtil
 import com.google.i18n.phonenumbers.geocoding.PhoneNumberOfflineGeocoder
@@ -53,6 +54,8 @@ class App : FossifyApp() {
         openContactOnClickByDefault()
         syncLauncherIconColor()
         warmUpLibraries()
+        // Retry any pending filename changes if MediaTek finished saving after the call UI closed.
+        ensureBackgroundThread { RecordingNames.renamePending(applicationContext) }
         if (hasPermission(PERMISSION_READ_CALL_LOG)) {
             RecentsCache.preload(this)
         }
