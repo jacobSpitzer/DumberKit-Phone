@@ -238,6 +238,15 @@
             </intent-filter>
         </service>
 
+        <!-- Android Telecom sends missed-call notifications to the selected default dialer. -->
+        <receiver
+            android:name=".receivers.MissedCallReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.telecom.action.SHOW_MISSED_CALLS_NOTIFICATION" />
+            </intent-filter>
+        </receiver>
+
         <receiver
             android:name=".receivers.CallActionReceiver"
             android:enabled="true"
