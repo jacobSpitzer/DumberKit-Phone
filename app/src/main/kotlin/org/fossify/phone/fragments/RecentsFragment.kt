@@ -18,6 +18,7 @@ import org.fossify.commons.helpers.ensureBackgroundThread
 import org.fossify.commons.models.contacts.Contact
 import org.fossify.phone.R
 import org.fossify.phone.activities.MainActivity
+import org.fossify.phone.activities.NumberHistoryActivity
 import org.fossify.phone.activities.SimpleActivity
 import org.fossify.phone.adapters.RecentCallsAdapter
 import org.fossify.phone.databinding.FragmentRecentsBinding
@@ -179,7 +180,7 @@ class RecentsFragment(
                     },
                     itemClick = {
                         val recentCall = it as RecentCall
-                        activity?.startCallWithConfirmationCheck(recentCall.phoneNumber, recentCall.name)
+                        NumberHistoryActivity.open(context, recentCall.phoneNumber, recentCall.name)
                     },
                     profileIconClick = {
                         val recentCall = it as RecentCall
