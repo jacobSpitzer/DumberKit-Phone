@@ -16,6 +16,9 @@
     <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Read native MediaTek PhoneRecord audio for playback in per-number call history. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.telecom.action.CONFIGURE_PHONE_ACCOUNT" />
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -143,6 +146,12 @@
             android:launchMode="singleTask"
             android:screenOrientation="portrait"
             android:showOnLockScreen="true" />
+
+        <activity
+            android:name=".activities.NumberHistoryActivity"
+            android:exported="false"
+            android:label="@string/dpad_history_title"
+            android:parentActivityName=".activities.MainActivity" />
 
         <activity
             android:name=".activities.DialpadActivity"
