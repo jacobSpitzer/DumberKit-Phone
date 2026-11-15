@@ -26,11 +26,17 @@ nothing gets pressed by accident in your pocket.
 - **OK on a recent call** opens a complete per-number call-history timeline, including individual date, duration, direction, and summary counts.
 - **Green Call** still calls the selected number, from the recent-calls screen or the history timeline.
 - On the number-history screen, grant **Audio** access when prompted to display and directly play native PhoneRecord recordings. Recording matching uses a timestamp window because the original MediaTek filenames do not contain the caller's number.
-- The dialpad can suggest previously called unsaved numbers after typing two digits (arrow keys then OK/green to dial).
+- The dialpad suggests previously called unsaved numbers after typing two digits (arrow keys then OK/green to dial).
+- The Search icon uses the DOOV's numeric keys for T9 name/number matching, without opening the on-screen keyboard. Back erases digits.
+- Grouped call history can combine the same number across dates; this uses the existing grouping setting.
+- Recents shows a recording marker when a native recording is matched, and the per-number timeline uses direction icons and one-key playback.
 - NovaDial-inspired indexed contact lookups avoid repeated full-contact scans while rebuilding call history.
+- NovaDial-inspired missed-call notifications include a callback action that opens the dialpad without automatically placing a call.
+- Settings has a one-time **Name call recordings** action; grant access to the **PhoneRecord** folder so the app can name new recordings using the contact, number and timestamp. Ambiguous files are left unchanged.
+- `*` and `#` remain supported if delivered by Android but DOOV firmware may intercept them. All important actions have on-screen-keyboard-free alternatives (top-bar Ab, selected-item menu, D-pad/OK/green).
 - App ID: `com.r77pro.phone`. Manual workflow produces a non-debuggable release APK; to install upgrades without uninstalling, configure a **persistent signing key**.
 
-The original MediaTek recording files are never renamed or modified by this version. The number/history link and audio playback are new features that need testing on the actual phone. No builds run automatically.
+The base native MediaTek recorder is unchanged. **Optional recording filename management** renames only successfully matched recordings after user grants the PhoneRecord folder permission; it does not alter audio data. Playback, history links, notifications and naming still require real-device testing. No builds run automatically.
 
 ## Using it with the keys
 
