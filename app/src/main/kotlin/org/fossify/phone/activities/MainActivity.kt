@@ -314,9 +314,11 @@ class MainActivity : SimpleActivity() {
         binding.mainMore.setOnClickListener { showMoreMenu() }
         binding.mainSearchClose.setOnClickListener { closeSearch() }
 
-        // Traditional T9 and similar keyboards: "visible password" disables predictive mode, so names are typed
-        // letter by letter (ABC), and the locale hint switches to English just for this field
-        binding.mainSearchInput.imeHintLocales = LocaleList(Locale.ENGLISH)
+        // The DOOV's numeric hardware keys are interpreted by the app itself.
+        // Never launch an on-screen IME for this field.
+        binding.mainSearchInput.showSoftInputOnFocus = false
+        binding.mainSearchInput.isCursorVisible = false
+        binding.mainSearchInput.keyListener = null
 
         binding.mainSearchInput.doAfterTextChanged { text ->
             if (isSearchOpen && !searchFromHistory) {
@@ -387,27 +389,11 @@ class MainActivity : SimpleActivity() {
         binding.mainSearchInput.apply {
             setText("")
             moveFocusOutOfList { requestFocus() }
-            showSearchKeyboard(this)
+            hideKeyboardKeepingFocus()
         }
         if (!searchFromHistory) {
             getCurrentFragment()?.onSearchQueryChanged("")
         }
-    }
-
-    /** Connects the phone's keyboard (e.g. Traditional T9) right away, so it's active before the first key press. */
-    private fun showSearchKeyboard(input: EditText, attemptsLeft: Int = 10) {
-        input.postDelayed({
-            if (!isSearchOpen || isDestroyed) {
-                return@postDelayed
-            }
-
-            val inputMethodManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-            if (!input.hasWindowFocus() || !inputMethodManager.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)) {
-                if (attemptsLeft > 0) {
-                    showSearchKeyboard(input, attemptsLeft - 1)
-                }
-            }
-        }, 50)
     }
 
     private fun closeSearch() {
@@ -741,6 +727,23 @@ class MainActivity : SimpleActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // Search is T9-only: physical digits filter contacts rather than launching Dialpad,
+        // and the soft keyboard is never invoked (also works when the firmware has no IME).
+        if (isSearchOpen && event.keyCode in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                val digit = ('0' + event.keyCode - KeyEvent.KEYCODE_0).toString()
+                binding.mainSearchInput.setText(getCurrentQuery() + digit)
+                binding.mainSearchInput.requestFocus()
+            }
+            return true
+        }
+        if (isSearchOpen && event.keyCode == KeyEvent.KEYCODE_DEL) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                binding.mainSearchInput.setText(getCurrentQuery().dropLast(1))
+                binding.mainSearchInput.requestFocus()
+            }
+            return true
+        }
         val inEditText = currentFocus is EditText
 
         // open the popup and the letter grid on key up, otherwise the new window receives the key up and stops
