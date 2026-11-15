@@ -1,4 +1,4 @@
-name: Build DumberKit APK (manual)
+name: Build R77 Pro Phone APK (manual)
 
 on:
   workflow_dispatch:
@@ -29,41 +29,59 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Restore optional persistent debug signing key
+      - name: Build signed, non-debuggable release APK
+        shell: bash
         env:
-          DEBUG_KEYSTORE_BASE64: ${{ secrets.DUMBERKIT_DEBUG_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.R77_RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEY_ALIAS: ${{ secrets.R77_RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.R77_RELEASE_KEY_PASSWORD }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.R77_RELEASE_STORE_PASSWORD }}
         run: |
-          if [ -n "$DEBUG_KEYSTORE_BASE64" ]; then
-            mkdir -p "$HOME/.android"
-            printf '%s' "$DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
-            chmod 600 "$HOME/.android/debug.keystore"
+          set -euo pipefail
+          chmod +x gradlew
+          mkdir -p "$RUNNER_TEMP/r77-signing"
+          export SIGNING_STORE_FILE="$RUNNER_TEMP/r77-signing/r77pro.jks"
+
+          if [ -n "$RELEASE_KEYSTORE_BASE64" ]; then
+            : "${RELEASE_KEY_ALIAS:?Configure R77_RELEASE_KEY_ALIAS secret}"
+            : "${RELEASE_KEY_PASSWORD:?Configure R77_RELEASE_KEY_PASSWORD secret}"
+            : "${RELEASE_STORE_PASSWORD:?Configure R77_RELEASE_STORE_PASSWORD secret}"
+            printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$SIGNING_STORE_FILE"
+            export SIGNING_KEY_ALIAS="$RELEASE_KEY_ALIAS"
+            export SIGNING_KEY_PASSWORD="$RELEASE_KEY_PASSWORD"
+            export SIGNING_STORE_PASSWORD="$RELEASE_STORE_PASSWORD"
           else
-            echo '::warning::Debug APK key changes between GitHub runners; upgrading an existing install may require uninstalling it unless you configure a persistent signing key.'
+            echo '::warning::No persistent R77 signing keystore configured. Creating an ephemeral release key; updating this APK later may require uninstalling the existing app.'
+            export SIGNING_KEY_ALIAS=r77pro
+            export SIGNING_KEY_PASSWORD=android
+            export SIGNING_STORE_PASSWORD=android
+            keytool -genkeypair -noprompt -keystore "$SIGNING_STORE_FILE" \
+              -storepass "$SIGNING_STORE_PASSWORD" -keypass "$SIGNING_KEY_PASSWORD" \
+              -alias "$SIGNING_KEY_ALIAS" -keyalg RSA -keysize 3072 -validity 3650 \
+              -dname 'CN=R77 Pro Phone, O=Personal Testing, C=IL'
           fi
 
-      - name: Build debug APK
-        run: |
-          chmod +x gradlew
-          ./gradlew --no-daemon :app:assembleFossDebug
+          ./gradlew --no-daemon :app:assembleFossRelease
 
       - name: Prepare APK
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p release
           shopt -s nullglob
-          apks=(app/build/outputs/apk/foss/debug/*.apk)
+          apks=(app/build/outputs/apk/foss/release/*.apk)
           if [ "${#apks[@]}" -ne 1 ]; then
-            echo "Expected one APK, found ${#apks[@]}" >&2
+            echo "Expected one release APK, found ${#apks[@]}" >&2
             exit 1
           fi
-          cp "${apks[0]}" release/DumberKit-Phone-debug.apk
+          cp "${apks[0]}" release/R77-Pro-Phone.apk
 
-      - name: Publish APK directly to GitHub Releases
+      - name: Publish direct APK
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "manual-build-${GITHUB_RUN_NUMBER}" \
-            release/DumberKit-Phone-debug.apk \
+          gh release create "r77pro-manual-${GITHUB_RUN_NUMBER}" \
+            release/R77-Pro-Phone.apk \
             --target "$GITHUB_SHA" \
-            --title "DumberKit Phone manual build ${GITHUB_RUN_NUMBER}" \
-            --notes 'Debug build for device testing; recording is not yet implemented.' \
-            --prerelease
+            --title "R77 Pro Phone ${GITHUB_RUN_NUMBER}" \
+            --notes 'Non-debuggable signed release APK for DOOV R77 Pro. Call recording uses the OEM MediaTek event API. If no persistent signing secrets are configured, upgrades may require uninstalling the previous APK.'

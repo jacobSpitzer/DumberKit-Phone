@@ -1,6 +1,8 @@
 package org.fossify.phone.activities
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import org.fossify.commons.extensions.getProperPrimaryColor
 import org.fossify.commons.extensions.applyColorFilter
 import android.text.style.ForegroundColorSpan
@@ -11,6 +13,12 @@ import android.graphics.Color
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
+import android.provider.CallLog.Calls
+import android.telephony.PhoneNumberUtils
+import android.util.Log
+import android.util.TypedValue
+import android.view.View
+import android.widget.TextView
 import android.provider.Telephony.Sms.Intents.SECRET_CODE_ACTION
 import android.telephony.TelephonyManager
 import android.view.KeyEvent
@@ -28,6 +36,7 @@ import org.fossify.commons.extensions.normalizeString
 import org.fossify.commons.extensions.updateTextColors
 import org.fossify.commons.extensions.viewBinding
 import org.fossify.commons.helpers.ContactsHelper
+import org.fossify.commons.helpers.ensureBackgroundThread
 import org.fossify.commons.helpers.KeypadHelper
 import org.fossify.commons.helpers.MyContactsContentProvider
 import org.fossify.commons.helpers.REQUEST_CODE_SET_DEFAULT_DIALER
@@ -44,6 +53,7 @@ import org.fossify.phone.extensions.startCallWithConfirmationCheck
 import org.fossify.phone.helpers.DIALPAD_TONE_LENGTH_MS
 import org.fossify.phone.helpers.RecentsHelper
 import org.fossify.phone.helpers.ToneGeneratorHelper
+import org.fossify.phone.helpers.applyDpadFocusHighlight
 import org.fossify.phone.helpers.dpadPopupMenu
 import org.fossify.phone.helpers.focusItem
 import org.fossify.phone.models.SpeedDial
@@ -55,12 +65,17 @@ import java.util.Locale
  */
 private const val CURSOR = "|"
 private const val CURSOR_BLINK_MS = 530L
+private const val RECENT_NUMBER_SCAN_LIMIT = 4000
+private const val MAX_RECENT_NUMBER_SUGGESTIONS = 4
 
 class DialpadActivity : SimpleActivity() {
     private val binding by viewBinding(ActivityDialpadBinding::inflate)
 
     private var number = ""
     private var allContacts = ArrayList<Contact>()
+    private var previouslyDialedNumbers: List<String> = emptyList()
+    private var savedContactNumberKeys: Set<String> = emptySet()
+    private var loadingPreviousNumbers = false
     private var speedDialValues = ArrayList<SpeedDial>()
     private var privateCursor: Cursor? = null
     private var toneGeneratorHelper: ToneGeneratorHelper? = null
@@ -105,6 +120,7 @@ class DialpadActivity : SimpleActivity() {
         checkDialIntent()
         showNumber()
 
+        loadPreviouslyDialedNumbers()
         ContactsHelper(this).getContacts(showOnlyContactsWithNumbers = true) { contacts ->
             gotContacts(contacts)
         }
@@ -118,7 +134,9 @@ class DialpadActivity : SimpleActivity() {
         binding.dialpadDivider.setBackgroundColor(textColor)
         listOf(binding.dialpadNumber, binding.dialpadName).forEach { it.setTextColor(textColor) }
         binding.dialpadNumberIcon.applyColorFilter(getProperPrimaryColor())
+        binding.dialpadRecentHeader.setTextColor(getProperPrimaryColor())
         restartCursorBlink()
+        loadPreviouslyDialedNumbers()
         window.statusBarColor = getProperBackgroundColor()
     }
 
@@ -181,6 +199,11 @@ class DialpadActivity : SimpleActivity() {
             }
 
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                // OK on a previously dialed suggestion calls the suggested number.
+                if (recentSuggestionIndex() >= 0) {
+                    if (event.repeatCount == 0) currentFocus?.performClick()
+                    return true
+                }
                 // OK on a contact is its click (calls it), on the number it calls the number
                 if (binding.dialpadNumber.isFocused) {
                     if (event.repeatCount == 0) {
@@ -192,17 +215,38 @@ class DialpadActivity : SimpleActivity() {
 
             KeyEvent.KEYCODE_DPAD_DOWN -> {
                 if (binding.dialpadNumber.isFocused) {
-                    binding.dialpadList.focusItem(0)
+                    if (binding.dialpadRecentList.childCount > 0) {
+                        binding.dialpadRecentList.getChildAt(0).requestFocusFromTouch()
+                    } else {
+                        binding.dialpadList.focusItem(0)
+                    }
+                    return true
+                }
+
+                val recentIndex = recentSuggestionIndex()
+                if (recentIndex >= 0) {
+                    val next = binding.dialpadRecentList.getChildAt(recentIndex + 1)
+                    if (next != null) next.requestFocusFromTouch() else binding.dialpadList.focusItem(0)
                     return true
                 }
             }
 
             KeyEvent.KEYCODE_DPAD_UP -> {
+                val recentIndex = recentSuggestionIndex()
+                if (recentIndex >= 0) {
+                    if (recentIndex == 0) binding.dialpadNumber.requestFocusFromTouch()
+                    else binding.dialpadRecentList.getChildAt(recentIndex - 1).requestFocusFromTouch()
+                    return true
+                }
                 val list = binding.dialpadList
                 val focused = currentFocus
                 val row = focused?.let { list.findContainingItemView(it) }
                 if (row != null && list.getChildAdapterPosition(row) == 0) {
-                    binding.dialpadNumber.requestFocus()
+                    if (binding.dialpadRecentList.childCount > 0) {
+                        binding.dialpadRecentList.getChildAt(binding.dialpadRecentList.childCount - 1).requestFocusFromTouch()
+                    } else {
+                        binding.dialpadNumber.requestFocusFromTouch()
+                    }
                     return true
                 }
             }
@@ -355,6 +399,101 @@ class DialpadActivity : SimpleActivity() {
 
     // ---- matching contacts ----
 
+    /**
+     * Cache recent outgoing numbers without touching the dialer UI thread.
+     * This includes numbers that have never been added as contacts.
+     */
+    private fun loadPreviouslyDialedNumbers() {
+        if (loadingPreviousNumbers ||
+            checkSelfPermission(Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED
+        ) return
+
+        loadingPreviousNumbers = true
+        ensureBackgroundThread {
+            val numbers = LinkedHashMap<String, String>()
+            try {
+                contentResolver.query(
+                    Calls.CONTENT_URI,
+                    arrayOf(Calls.NUMBER),
+                    "${Calls.TYPE} = ?",
+                    arrayOf(Calls.OUTGOING_TYPE.toString()),
+                    "${Calls.DATE} DESC"
+                )?.use { cursor ->
+                    val numberColumn = cursor.getColumnIndex(Calls.NUMBER)
+                    var scanned = 0
+                    if (numberColumn >= 0) {
+                        while (cursor.moveToNext() && scanned++ < RECENT_NUMBER_SCAN_LIMIT && numbers.size < 400) {
+                            val candidate = cursor.getString(numberColumn)?.trim().orEmpty()
+                            val key = normalizedNumberKey(candidate)
+                            if (key.length >= 3 && candidate != "-1") {
+                                numbers.putIfAbsent(key, candidate)
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("R77RecentNumbers", "Could not read outgoing call history", e)
+            }
+
+            runOnUiThread {
+                loadingPreviousNumbers = false
+                if (!isFinishing && !isDestroyed) {
+                    previouslyDialedNumbers = numbers.values.toList()
+                    showPreviousNumberSuggestions()
+                }
+            }
+        }
+    }
+
+    private fun normalizedNumberKey(value: String) =
+        PhoneNumberUtils.normalizeNumber(value).filter { it.isDigit() }
+
+    private fun recentSuggestionIndex(): Int {
+        val focused = currentFocus ?: return -1
+        val container = binding.dialpadRecentList
+        for (index in 0 until container.childCount) {
+            if (container.getChildAt(index) == focused) return index
+        }
+        return -1
+    }
+
+    /** Show up to four non-contact outgoing numbers matching digits typed on the physical keypad. */
+    private fun showPreviousNumberSuggestions() {
+        val query = number.filter { it.isDigit() }
+        val matches = if (query.length < 2 || number.any { !it.isDigit() && it != '+' }) {
+            emptyList()
+        } else {
+            previouslyDialedNumbers
+                .asSequence()
+                .filter { normalizedNumberKey(it) !in savedContactNumberKeys }
+                .filter { normalizedNumberKey(it).contains(query) }
+                .sortedBy { if (normalizedNumberKey(it).startsWith(query)) 0 else 1 }
+                .take(MAX_RECENT_NUMBER_SUGGESTIONS)
+                .toList()
+        }
+
+        binding.dialpadRecentList.removeAllViews()
+        binding.dialpadRecentHolder.beVisibleIf(matches.isNotEmpty())
+        val paddingX = (16 * resources.displayMetrics.density).toInt()
+        val paddingY = (9 * resources.displayMetrics.density).toInt()
+        for (previousNumber in matches) {
+            val row = TextView(this).apply {
+                text = previousNumber
+                contentDescription = getString(R.string.dpad_dial_previous_number, previousNumber)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
+                setTextColor(getProperTextColor())
+                setPadding(paddingX, paddingY, paddingX, paddingY)
+                isFocusable = true
+                isClickable = true
+                applyDpadFocusHighlight()
+                setOnClickListener {
+                    initCall(number = previousNumber, name = previousNumber)
+                }
+            }
+            binding.dialpadRecentList.addView(row)
+        }
+    }
+
     private fun gotContacts(newContacts: ArrayList<Contact>) {
         allContacts = newContacts
 
@@ -363,6 +502,12 @@ class DialpadActivity : SimpleActivity() {
             allContacts.addAll(privateContacts)
             allContacts.sort()
         }
+
+        savedContactNumberKeys = allContacts
+            .flatMap { contact -> contact.phoneNumbers.flatMap { listOf(it.value, it.normalizedNumber) } }
+            .map { normalizedNumberKey(it) }
+            .filter { it.isNotEmpty() }
+            .toSet()
 
         runOnUiThread { numberChanged() }
     }
@@ -461,6 +606,7 @@ class DialpadActivity : SimpleActivity() {
         }
 
         binding.dialpadList.beVisibleIf(filtered.isNotEmpty())
+        showPreviousNumberSuggestions()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?) {
@@ -473,6 +619,10 @@ class DialpadActivity : SimpleActivity() {
     // ---- calling ----
 
     private fun callFocusedOrTyped() {
+        if (recentSuggestionIndex() >= 0) {
+            currentFocus?.performClick()
+            return
+        }
         val list = binding.dialpadList
         val row = currentFocus?.let { list.findContainingItemView(it) }
         if (row != null) {

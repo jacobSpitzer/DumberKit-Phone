@@ -63,6 +63,12 @@
                 <data android:mimeType="vnd.android.cursor.dir/calls" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <!-- On keypad phones Android's physical green Call key often fires this intent. -->
+            <intent-filter>
+                <action android:name="android.intent.action.CALL_BUTTON" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
         </activity>
 
         <activity
@@ -228,7 +234,7 @@
             android:exported="false" />
 
         <activity-alias
-            android:name="com.dumberkit.phone.activities.SplashActivity.Red"
+            android:name="${applicationId}.activities.SplashActivity.Red"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_red"
@@ -242,7 +248,7 @@
         </activity-alias>
 
         <activity-alias
-            android:name="com.dumberkit.phone.activities.SplashActivity.Pink"
+            android:name="${applicationId}.activities.SplashActivity.Pink"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_pink"
@@ -256,7 +262,7 @@
         </activity-alias>
 
         <activity-alias
-            android:name="com.dumberkit.phone.activities.SplashActivity.Purple"
+            android:name="${applicationId}.activities.SplashActivity.Purple"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_purple"
@@ -270,7 +276,7 @@
         </activity-alias>
 
         <activity-alias
-            android:name="com.dumberkit.phone.activities.SplashActivity.Deep_purple"
+            android:name="${applicationId}.activities.SplashActivity.Deep_purple"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_deep_purple"
@@ -284,7 +290,7 @@
         </activity-alias>
 
         <activity-alias
-            android:name="com.dumberkit.phone.activities.SplashActivity.Indigo"
+            android:name="${applicationId}.activities.SplashActivity.Indigo"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_indigo"
@@ -298,7 +304,7 @@
         </activity-alias>
 
         <activity-alias
-            android:name="com.dumberkit.phone.activities.SplashActivity.Blue"
+            android:name="${applicationId}.activities.SplashActivity.Blue"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_blue"
@@ -312,7 +318,7 @@
         </activity-alias>
 
         <activity-alias
-            android:name="com.dumberkit.phone.activities.SplashActivity.Light_blue"
+            android:name="${applicationId}.activities.SplashActivity.Light_blue"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_light_blue"
@@ -326,7 +332,7 @@
         </activity-alias>
 
         <activity-alias
-            android:name="com.dumberkit.phone.activities.SplashActivity.Cyan"
+            android:name="${applicationId}.activities.SplashActivity.Cyan"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_cyan"
@@ -340,7 +346,7 @@
         </activity-alias>
 
         <activity-alias
-            android:name="com.dumberkit.phone.activities.SplashActivity.Teal"
+            android:name="${applicationId}.activities.SplashActivity.Teal"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_teal"
@@ -354,7 +360,7 @@
         </activity-alias>
 
         <activity-alias
-            android:name="com.dumberkit.phone.activities.SplashActivity.Green"
+            android:name="${applicationId}.activities.SplashActivity.Green"
             android:enabled="true"
             android:exported="true"
             android:icon="@mipmap/ic_launcher"
@@ -368,7 +374,7 @@
         </activity-alias>
 
         <activity-alias
-            android:name="com.dumberkit.phone.activities.SplashActivity.Light_green"
+            android:name="${applicationId}.activities.SplashActivity.Light_green"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_light_green"
@@ -382,7 +388,7 @@
         </activity-alias>
 
         <activity-alias
-            android:name="com.dumberkit.phone.activities.SplashActivity.Lime"
+            android:name="${applicationId}.activities.SplashActivity.Lime"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_lime"
@@ -396,7 +402,7 @@
         </activity-alias>
 
         <activity-alias
-            android:name="com.dumberkit.phone.activities.SplashActivity.Yellow"
+            android:name="${applicationId}.activities.SplashActivity.Yellow"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_yellow"
@@ -410,7 +416,7 @@
         </activity-alias>
 
         <activity-alias
-            android:name="com.dumberkit.phone.activities.SplashActivity.Amber"
+            android:name="${applicationId}.activities.SplashActivity.Amber"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_amber"
@@ -424,7 +430,7 @@
         </activity-alias>
 
         <activity-alias
-            android:name="com.dumberkit.phone.activities.SplashActivity.Orange"
+            android:name="${applicationId}.activities.SplashActivity.Orange"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_orange"
@@ -437,7 +443,7 @@
         </activity-alias>
 
         <activity-alias
-            android:name="com.dumberkit.phone.activities.SplashActivity.Deep_orange"
+            android:name="${applicationId}.activities.SplashActivity.Deep_orange"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_deep_orange"
@@ -451,7 +457,7 @@
         </activity-alias>
 
         <activity-alias
-            android:name="com.dumberkit.phone.activities.SplashActivity.Brown"
+            android:name="${applicationId}.activities.SplashActivity.Brown"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_brown"
@@ -465,7 +471,7 @@
         </activity-alias>
 
         <activity-alias
-            android:name="com.dumberkit.phone.activities.SplashActivity.Blue_grey"
+            android:name="${applicationId}.activities.SplashActivity.Blue_grey"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_blue_grey"
@@ -479,7 +485,7 @@
         </activity-alias>
 
         <activity-alias
-            android:name="com.dumberkit.phone.activities.SplashActivity.Grey_black"
+            android:name="${applicationId}.activities.SplashActivity.Grey_black"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_grey_black"

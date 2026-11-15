@@ -24,7 +24,7 @@ fun hasSigningVars(): Boolean {
 
 base {
     val versionCode = project.property("VERSION_CODE").toString().toInt()
-    archivesName = "dumberkit-phone-$versionCode"
+    archivesName = "r77-pro-phone-$versionCode"
 }
 
 android {
@@ -65,7 +65,7 @@ android {
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".debug"
+            // Keep the package ID identical to the original app for keypad/dialer testing.
         }
         release {
             isMinifyEnabled = true

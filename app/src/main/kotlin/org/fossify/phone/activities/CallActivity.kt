@@ -1,9 +1,11 @@
 package org.fossify.phone.activities
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.Bundle
 import android.os.Handler
@@ -37,6 +39,7 @@ import org.fossify.phone.helpers.*
 import org.fossify.phone.models.AudioRoute
 import org.fossify.phone.models.CallContact
 import org.fossify.phone.receivers.ScreenOffAdminReceiver
+import org.fossify.phone.recording.MtkCallRecordingController
 
 /**
  * The call screen for keypad phones. Ringing: Call / OK / ← answer, End / → decline, Back silences the ringing and
@@ -52,6 +55,7 @@ class CallActivity : SimpleActivity() {
         private const val SHADE_CHECK_DELAY_MS = 150L
         private const val SCREEN_OFF_AFTER_MS = 2_000L
         private const val WAKE_KEY_GRACE_MS = 700L
+        private const val REQUEST_RECORD_AUDIO = 5021
 
         fun getStartIntent(context: Context): Intent {
             val openAppIntent = Intent(context, CallActivity::class.java)
@@ -73,11 +77,11 @@ class CallActivity : SimpleActivity() {
     private var dtmfTyped = ""
     private val callDurationHandler = Handler(Looper.getMainLooper())
 
-    private val rows get() = with(binding) { listOf(callToggleSpeaker, callToggleMicrophone, callToggleHold, callAdd, callSwap, callMerge, callManage, callEnd) }
+    private val rows get() = with(binding) { listOf(callToggleSpeaker, callToggleMicrophone, callToggleHold, callAdd, callSwap, callMerge, callManage, callRecord, callEnd) }
     private val rowIcons get() = with(binding) {
         mapOf(
             callToggleSpeaker to callToggleSpeakerIcon, callToggleMicrophone to callToggleMicrophoneIcon, callToggleHold to callToggleHoldIcon,
-            callAdd to callAddIcon, callSwap to callSwapIcon, callMerge to callMergeIcon, callManage to callManageIcon, callEnd to callEndIcon
+            callAdd to callAddIcon, callSwap to callSwapIcon, callMerge to callMergeIcon, callManage to callManageIcon, callRecord to callRecordIcon, callEnd to callEndIcon
         )
     }
 
@@ -85,6 +89,8 @@ class CallActivity : SimpleActivity() {
     private val activeRows = mutableSetOf<View>()
     private var holdLabel = R.string.hold_call
     private var speakerState = ""
+    // Tracks our own request, NOT confirmed native recording state.
+    private var recordingRequested = false
 
     // a long call dims the screen (Android turns it off after the phone's screen timeout), Back or green lights it up
     private val dimHandler = Handler(Looper.getMainLooper())
@@ -219,6 +225,7 @@ class CallActivity : SimpleActivity() {
         callManage.setOnClickListener {
             startActivity(Intent(this@CallActivity, ConferenceActivity::class.java))
         }
+        callRecord.setOnClickListener { toggleRecordingRequest() }
         callEnd.setOnClickListener { endCall() }
     }
 
@@ -271,6 +278,7 @@ class CallActivity : SimpleActivity() {
             callToggleSpeaker -> "${callToggleSpeaker.contentDescription}: $speakerState"
             callToggleMicrophone -> "${getString(R.string.dpad_mute)}: ${onOff(callToggleMicrophone)}"
             callToggleHold -> getString(holdLabel)
+            callRecord -> getString(if (recordingRequested) R.string.dpad_record_stop else R.string.dpad_record_start)
             else -> focused.contentDescription
         }
     }
@@ -629,6 +637,7 @@ class CallActivity : SimpleActivity() {
             callManage.beVisibleIf(!isCallEnded && call.hasCapability(Call.Details.CAPABILITY_MANAGE_CONFERENCE))
             setRowEnabled(callSwap, enabled = !isCallEnded && state == Call.STATE_ACTIVE)
             setRowEnabled(callMerge, enabled = !isCallEnded && state == Call.STATE_ACTIVE)
+            setRowEnabled(callRecord, enabled = !isCallEnded && state == Call.STATE_ACTIVE)
         }
     }
 
@@ -744,7 +753,51 @@ class CallActivity : SimpleActivity() {
         }
     }
 
+    /**
+     * Match the OEM stock dialer: dispatch the MediaTek call event on the current Call.
+     * A successful dispatch is not proof of actual recording. Check the device recording file.
+     */
+    private fun toggleRecordingRequest() {
+        if (isCallEnded || CallManager.getState() != Call.STATE_ACTIVE) return
+
+        // Telecom's native MediaTek recording path checks RECORD_AUDIO on the caller.
+        if (!recordingRequested && checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_RECORD_AUDIO)
+            return
+        }
+
+        submitRecordingRequest(start = !recordingRequested)
+    }
+
+    private fun submitRecordingRequest(start: Boolean) {
+        val error = MtkCallRecordingController.request(CallManager.getPrimaryCall(), start)
+        if (error == null) {
+            recordingRequested = start
+            setRowActive(binding.callRecord, recordingRequested)
+            toast(if (start) R.string.dpad_record_request_sent else R.string.dpad_record_stop_sent)
+        } else {
+            toast(R.string.dpad_record_request_failed)
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_RECORD_AUDIO) {
+            if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED &&
+                !isCallEnded && CallManager.getState() == Call.STATE_ACTIVE
+            ) {
+                submitRecordingRequest(start = true)
+            } else {
+                toast(R.string.dpad_record_permission_denied)
+            }
+        }
+    }
+
     private fun endCall() {
+        if (recordingRequested) {
+            MtkCallRecordingController.request(CallManager.getPrimaryCall(), start = false)
+            recordingRequested = false
+        }
         CallManager.reject()
         disableProximitySensor()
 

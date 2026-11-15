@@ -247,6 +247,18 @@
                     android:src="@drawable/ic_people_vector" />
             </FrameLayout>
 
+            <!-- Manual recording test: submits the MediaTek Telecom action (not an acknowledgement). -->
+            <FrameLayout
+                android:id="@+id/call_record"
+                style="@style/DpadCallTile"
+                android:contentDescription="@string/dpad_record_start">
+
+                <ImageView
+                    android:id="@+id/call_record_icon"
+                    style="@style/DpadCallTileIcon"
+                    android:src="@drawable/ic_record_dot_vector" />
+            </FrameLayout>
+
             <FrameLayout
                 android:id="@+id/call_end"
                 style="@style/DpadCallTile"
