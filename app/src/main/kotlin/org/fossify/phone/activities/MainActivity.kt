@@ -737,8 +737,11 @@ class MainActivity : SimpleActivity() {
             }
             return true
         }
-        if (isSearchOpen && event.keyCode == KeyEvent.KEYCODE_DEL) {
-            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+        if (isSearchOpen && (event.keyCode == KeyEvent.KEYCODE_DEL ||
+                (event.keyCode == KeyEvent.KEYCODE_BACK && getCurrentQuery().isNotEmpty()))) {
+            // DOOV has a Back key but no dedicated physical Delete key. Back deletes
+            // a digit while searching; once the query is empty Back closes Search.
+            if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) {
                 binding.mainSearchInput.setText(getCurrentQuery().dropLast(1))
                 binding.mainSearchInput.requestFocus()
             }
