@@ -255,7 +255,7 @@ class App : FossifyApp() {
         }
 
         val names = appIconColorStrings
-        val appId = BuildConfig.APPLICATION_ID.removeSuffix(".debug")
+        val appId = BuildConfig.APPLICATION_ID
         val enabledIndex = names.indexOfFirst { name ->
             val component = ComponentName(appId, "$appId.activities.SplashActivity$name")
             val state = packageManager.getComponentEnabledSetting(component)
