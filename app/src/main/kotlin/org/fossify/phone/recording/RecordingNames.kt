@@ -167,7 +167,7 @@ object RecordingNames {
             val namePart = sanitizedPart(name, 40)
                 .takeUnless { it == numberPart || it == number || it.isBlank() }
             val label = listOfNotNull(namePart, numberPart).joinToString("_")
-            val newName = "\${label}_\${readableDate(file.time)}.\${extension}"
+            val newName = "${label}_${readableDate(file.time)}.${extension}"
             if (file.name == newName) continue
             try {
                 val renamed = DocumentsContract.renameDocument(context.contentResolver, file.uri, newName)
