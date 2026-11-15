@@ -180,7 +180,7 @@ class RecentsFragment(
                     },
                     itemClick = {
                         val recentCall = it as RecentCall
-                        NumberHistoryActivity.open(context, recentCall.phoneNumber, recentCall.name)
+                        activity?.let { screen -> NumberHistoryActivity.open(screen, recentCall.phoneNumber, recentCall.name) }
                     },
                     profileIconClick = {
                         val recentCall = it as RecentCall
