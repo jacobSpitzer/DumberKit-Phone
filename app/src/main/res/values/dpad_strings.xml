@@ -62,6 +62,12 @@
     <string name="dpad_add_wait">Add a wait (;)</string>
     <string name="dpad_speaker">Speaker</string>
     <string name="dpad_mute">Mute</string>
+    <string name="dpad_record_start">Record (test)</string>
+    <string name="dpad_record_stop">Stop recording (test)</string>
+    <string name="dpad_record_request_sent">Recording request sent. Check whether the stock recorder actually saved audio.</string>
+    <string name="dpad_record_stop_sent">Stop request sent.</string>
+    <string name="dpad_record_request_failed">Recording request was rejected.</string>
+    <string name="dpad_record_status">Recording access not confirmed; this is an experimental test.</string>
     <string name="dpad_hang_up">Hang up</string>
     <string name="dpad_on">On</string>
     <string name="dpad_off">Off</string>
