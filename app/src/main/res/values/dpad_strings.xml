@@ -52,7 +52,7 @@
     <string name="dpad_key_incoming_decline">Decline (→)</string>
     <string name="dpad_key_incoming_back">First press: silence the ringing · second press: hide the screen, the call keeps ringing silently</string>
     <string name="dpad_about_ongoing">During a call</string>
-    <string name="dpad_key_ongoing_rows">Pick a button: speaker, mute, hold, add call, hang up</string>
+    <string name="dpad_key_ongoing_rows">Pick a button: speaker, mute, hold, add call, record, hang up</string>
     <string name="dpad_key_ongoing_digits">Tones for menus of automated lines</string>
     <string name="dpad_key_ongoing_end">Hang up (with the screen on and Android\'s \"Power button ends call\")</string>
     <string name="dpad_answer">Answer</string>
@@ -62,13 +62,13 @@
     <string name="dpad_add_wait">Add a wait (;)</string>
     <string name="dpad_speaker">Speaker</string>
     <string name="dpad_mute">Mute</string>
-    <string name="dpad_record_start">Record (test)</string>
-    <string name="dpad_record_stop">Stop recording (test)</string>
-    <string name="dpad_record_request_sent">Native recording requested. Check for a saved file after the call.</string>
-    <string name="dpad_record_stop_sent">Stop request sent.</string>
+    <string name="dpad_record_start">Record</string>
+    <string name="dpad_record_stop">Stop recording</string>
+    <string name="dpad_record_request_sent">Recording started</string>
+    <string name="dpad_record_stop_sent">Recording stopped</string>
     <string name="dpad_record_request_failed">Could not send recording request.</string>
     <string name="dpad_record_permission_denied">Allow microphone permission for native recording.</string>
-    <string name="dpad_record_status">Recording access not confirmed; this is an experimental test.</string>
+    <string name="dpad_record_status">Native recording through MediaTek telecom</string>
     <string name="dpad_hang_up">Hang up</string>
     <string name="dpad_on">On</string>
     <string name="dpad_off">Off</string>
