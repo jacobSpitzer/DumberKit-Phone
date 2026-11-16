@@ -21,7 +21,11 @@ import android.view.ViewGroup
 
 import android.view.View
 
+import android.Manifest
 import android.content.ActivityNotFoundException
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.appcompat.app.AlertDialog
 import android.content.Intent
 import android.telecom.TelecomManager
 import android.provider.Settings
@@ -149,6 +153,7 @@ class SettingsActivity : SimpleActivity() {
         setupGroupSubsequentCalls()
         setupSystemCallingSettings()
         setupRecordingFolder()
+        setupRecordingTools()
         setupStartNameWithSurname()
         setupTouchInput()
         setupScreenOff()
@@ -562,15 +567,80 @@ class SettingsActivity : SimpleActivity() {
         }
     }
 
+    private fun setupRecordingTools() {
+        binding.settingsRecordingsListHolder.setOnClickListener {
+            startActivity(Intent(this, RecordingsActivity::class.java))
+        }
+        binding.settingsPermissionsHolder.setOnClickListener {
+            showPermissionStatus()
+        }
+    }
+
+    /**
+     * Non-privileged dialers cannot silently obtain every Phone/Telecom permission.
+     * Report the actual grants, request only runtime permissions, and give direct
+     * access to Android's app permissions screen.
+     */
+    private fun showPermissionStatus() {
+        val items = mutableListOf(
+            "Contacts" to Manifest.permission.READ_CONTACTS,
+            "Edit contacts" to Manifest.permission.WRITE_CONTACTS,
+            "Call history" to Manifest.permission.READ_CALL_LOG,
+            "Edit call history" to Manifest.permission.WRITE_CALL_LOG,
+            "Place calls" to Manifest.permission.CALL_PHONE,
+            "Phone state" to Manifest.permission.READ_PHONE_STATE,
+            "Answer calls" to Manifest.permission.ANSWER_PHONE_CALLS,
+            "Microphone / native recording" to Manifest.permission.RECORD_AUDIO
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            items += "Audio recordings" to Manifest.permission.READ_MEDIA_AUDIO
+            items += "Missed-call notifications" to Manifest.permission.POST_NOTIFICATIONS
+        } else {
+            items += "Audio recordings" to Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+
+        val defaultDialer = (getSystemService(TELECOM_SERVICE) as TelecomManager)
+            .defaultDialerPackage == packageName
+        val missing = items.filter { checkSelfPermission(it.second) != PackageManager.PERMISSION_GRANTED }
+        val status = buildString {
+            append(getString(R.string.dpad_permissions_default_dialer))
+            append(": ")
+            append(getString(if (defaultDialer) R.string.dpad_permissions_granted
+                else R.string.dpad_permissions_missing))
+            append("\n")
+            items.forEach { (name, permission) ->
+                append(name)
+                append(": ")
+                append(getString(if (checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED)
+                    R.string.dpad_permissions_granted else R.string.dpad_permissions_missing))
+                append("\n")
+            }
+            append("Recording folder: ")
+            append(getString(if (RecordingNames.hasReadableFolder(this@SettingsActivity))
+                R.string.dpad_permissions_granted else R.string.dpad_permissions_missing))
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.dpad_permissions_title)
+            .setMessage(status)
+            .setPositiveButton(R.string.dpad_permissions_request) { _, _ ->
+                if (missing.isNotEmpty()) {
+                    requestPermissions(missing.map { it.second }.toTypedArray(), 4306)
+                }
+            }
+            .setNeutralButton(R.string.dpad_permissions_app_settings) { _, _ ->
+                startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.parse("package:$packageName")
+                })
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
     private fun setupRecordingFolder() {
         binding.apply {
-            settingsRecordingNamingLabel.setText(
-                if (RecordingNames.folderUri(this@SettingsActivity) != null) {
-                    R.string.dpad_recording_folder_ready
-                } else {
-                    R.string.dpad_recording_folder_setup
-                }
-            )
+            settingsRecordingNamingLabel.text = RecordingNames.folderName(this@SettingsActivity)
+                ?.let { getString(R.string.dpad_selected_recording_folder, it) }
+                ?: getString(R.string.dpad_recording_folder_setup)
             settingsRecordingNamingHolder.setOnClickListener {
                 // Android grants access to this folder only after user selection.
                 selectPhoneRecordFolder.launch(null)
