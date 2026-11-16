@@ -38,6 +38,18 @@ nothing gets pressed by accident in your pocket.
 
 The base native MediaTek recorder is unchanged. **Optional recording filename management** renames only successfully matched recordings after user grants the PhoneRecord folder permission; it does not alter audio data. Playback, history links, notifications and naming still require real-device testing. No builds run automatically.
 
+## Carrier call settings and recording access
+
+- **Settings → Call settings (carrier / SIM)** opens the firmware's call-settings screen (forwarding, waiting, caller ID, barring, voicemail, where supported).
+- **Settings → Calling accounts and SIM preferences** opens the system phone-account configuration screen.
+- Both entries fall back to the other known Telecom action, then Android Settings, if unavailable on the DOOV firmware.
+- **Settings → Choose recordings folder** accepts *any* user-selected recording folder name. It does **not** have to be `PhoneRecord`.
+- **Settings → Browse call recordings** shows recordings from the selected folder independently of call-log matches; press OK on a recording to play or stop.
+- **Settings → Check app permissions** reports actual current phone/contacts/call-log/microphone/audio/notification grants and allows requesting missing runtime permissions. Selecting the default Phone app and choosing a recording folder are separate actions.
+- **Search → ABC/אב** enables text entry through the Android keyboard for English/Hebrew names; the default search remains physical-keypad T9. Tapping the search field also activates text input.
+
+These flows are committed but must still be verified against the DOOV's firmware and carrier-provided settings.
+
 ## Using it with the keys
 
 ### Call history, contacts, favorites
