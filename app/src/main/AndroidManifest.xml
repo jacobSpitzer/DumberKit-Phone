@@ -126,6 +126,12 @@
             android:parentActivityName="org.fossify.phone.activities.CallActivity" />
 
         <activity
+            android:name=".activities.RecordingsActivity"
+            android:exported="false"
+            android:label="@string/dpad_browse_recordings"
+            android:parentActivityName=".activities.SettingsActivity" />
+
+        <activity
             android:name=".activities.SettingsActivity"
             android:configChanges="orientation"
             android:exported="true"
