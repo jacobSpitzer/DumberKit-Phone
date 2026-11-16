@@ -86,6 +86,9 @@
     <string name="dpad_add_wait">Add a wait (;)</string>
     <string name="dpad_speaker">Speaker</string>
     <string name="dpad_mute">Mute</string>
+    <string name="dpad_system_call_settings">Call settings (carrier / SIM)</string>
+    <string name="dpad_calling_accounts">Calling accounts and SIM preferences</string>
+    <string name="dpad_call_settings_unavailable">Call settings are unavailable on this phone; opening Android Settings instead</string>
     <string name="dpad_recording_folder_setup">Name call recordings (choose PhoneRecord)</string>
     <string name="dpad_recording_folder_ready">Recording names enabled (PhoneRecord)</string>
     <string name="dpad_recording_folder_invalid">Choose the PhoneRecord folder in internal storage</string>
