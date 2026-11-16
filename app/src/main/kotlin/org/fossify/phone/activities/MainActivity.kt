@@ -96,6 +96,7 @@ class MainActivity : SimpleActivity() {
     var cachedContacts = ArrayList<Contact>()
 
     private val isSearchOpen get() = binding.mainSearchBar.visibility == View.VISIBLE
+    private var isTextSearchMode = false
     private val toolbarButtons get() = listOf(binding.mainLetters, binding.mainSearch, binding.mainDialpad, binding.mainMore)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -312,11 +313,17 @@ class MainActivity : SimpleActivity() {
         binding.mainMore.setOnClickListener { showMoreMenu() }
         binding.mainSearchClose.setOnClickListener { closeSearch() }
 
-        // The DOOV's numeric hardware keys are interpreted by the app itself.
-        // Never launch an on-screen IME for this field.
+        // Numeric T9 is the default; pressing ABC/אב (or tapping the text field)
+        // activates normal English/Hebrew text input with the system keyboard.
+        // Keep the EditText's key listener so actual letters can be entered.
         binding.mainSearchInput.showSoftInputOnFocus = false
         binding.mainSearchInput.isCursorVisible = false
-        binding.mainSearchInput.keyListener = null
+        binding.mainSearchInput.setOnClickListener { enableTextSearchMode() }
+        binding.mainSearchLetters.applyDpadFocusHighlight()
+        binding.mainSearchLetters.setOnClickListener {
+            if (isTextSearchMode) disableTextSearchMode()
+            else enableTextSearchMode()
+        }
 
         binding.mainSearchInput.doAfterTextChanged { text ->
             if (isSearchOpen && !searchFromHistory) {
@@ -377,6 +384,7 @@ class MainActivity : SimpleActivity() {
     }
 
     private fun openSearch() {
+        disableTextSearchMode()
         searchFromHistory = getCurrentFragment() is RecentsFragment && visibleTabs(config.showTabs).contains(TAB_CONTACTS)
         if (!isSearchOpen) {
             getAllFragments().forEach { it?.finishActMode() }
@@ -399,6 +407,7 @@ class MainActivity : SimpleActivity() {
             return
         }
 
+        disableTextSearchMode()
         hideKeyboardKeepingFocus()
         searchFromHistory = false
         binding.mainSearchInput.setText("")
@@ -413,6 +422,29 @@ class MainActivity : SimpleActivity() {
     }
 
     private fun getCurrentQuery() = if (isSearchOpen) binding.mainSearchInput.text.toString() else ""
+
+    private fun enableTextSearchMode() {
+        isTextSearchMode = true
+        binding.mainSearchLetters.setText(R.string.dpad_t9_search_mode)
+        binding.mainSearchInput.apply {
+            showSoftInputOnFocus = true
+            isCursorVisible = true
+            requestFocus()
+            setSelection(text.length)
+            post {
+                (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager)
+                    .showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
+            }
+        }
+    }
+
+    private fun disableTextSearchMode() {
+        isTextSearchMode = false
+        binding.mainSearchLetters.setText(R.string.dpad_text_search_mode)
+        binding.mainSearchInput.showSoftInputOnFocus = false
+        binding.mainSearchInput.isCursorVisible = false
+        hideKeyboardKeepingFocus()
+    }
 
     /** Unlike Commons' hideKeyboard() this keeps the focus, which would otherwise flash on the top bar. */
     private fun hideKeyboardKeepingFocus() {
@@ -727,7 +759,8 @@ class MainActivity : SimpleActivity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         // Search is T9-only: physical digits filter contacts rather than launching Dialpad,
         // and the soft keyboard is never invoked (also works when the firmware has no IME).
-        if (isSearchOpen && event.keyCode in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9) {
+        if (isSearchOpen && !isTextSearchMode &&
+            event.keyCode in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
                 val digit = ('0' + event.keyCode - KeyEvent.KEYCODE_0).toString()
                 binding.mainSearchInput.setText(getCurrentQuery() + digit)
