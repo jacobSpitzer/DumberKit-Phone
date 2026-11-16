@@ -340,6 +340,7 @@ class MainActivity : SimpleActivity() {
         binding.mainSearchInput.setTextColor(textColor)
         binding.mainSearchInput.setHintTextColor(textColor.adjustAlpha(0.5f))
         (toolbarButtons + binding.mainSearchClose).forEach { it.applyColorFilter(textColor) }
+        binding.mainSearchLetters.setTextColor(textColor)
         window.statusBarColor = barColor
     }
 
@@ -817,7 +818,8 @@ class MainActivity : SimpleActivity() {
         val list = fragment?.getListView()
         val inList = focused != null && list != null && list.findContainingItemView(focused) != null
         val inPager = focused != null && focused.isInside(binding.viewPager)
-        val inTopBar = focused != null && (focused in toolbarButtons || focused == binding.mainSearchClose || focused == binding.mainSearchInput)
+        val inTopBar = focused != null && (focused in toolbarButtons || focused == binding.mainSearchClose ||
+            focused == binding.mainSearchInput || focused == binding.mainSearchLetters)
 
         when (event.keyCode) {
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
