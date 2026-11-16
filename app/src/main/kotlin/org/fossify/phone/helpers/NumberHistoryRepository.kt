@@ -83,7 +83,7 @@ object NumberHistoryRepository {
     }
 
     fun canReadAudio(context: Context): Boolean {
-        if (RecordingNames.folderUri(context) != null) return true
+        if (RecordingNames.hasReadableFolder(context)) return true
         val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             Manifest.permission.READ_MEDIA_AUDIO
         } else {
