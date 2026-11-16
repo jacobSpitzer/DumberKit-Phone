@@ -143,6 +143,6 @@ class Config(context: Context) : BaseConfig(context) {
         set(dpadScreenOffAsked) = prefs.edit().putBoolean(DPAD_SCREEN_OFF_ASKED, dpadScreenOffAsked).apply()
 
     var dpadTouchEnabled: Boolean
-        get() = prefs.getBoolean(DPAD_TOUCH_ENABLED, false)
+        get() = prefs.getBoolean(DPAD_TOUCH_ENABLED, true)
         set(dpadTouchEnabled) = prefs.edit().putBoolean(DPAD_TOUCH_ENABLED, dpadTouchEnabled).apply()
 }

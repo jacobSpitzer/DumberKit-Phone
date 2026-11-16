@@ -16,6 +16,9 @@
     <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Read native MediaTek PhoneRecord audio for playback in per-number call history. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.telecom.action.CONFIGURE_PHONE_ACCOUNT" />
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -123,6 +126,12 @@
             android:parentActivityName="org.fossify.phone.activities.CallActivity" />
 
         <activity
+            android:name=".activities.RecordingsActivity"
+            android:exported="false"
+            android:label="@string/dpad_browse_recordings"
+            android:parentActivityName=".activities.SettingsActivity" />
+
+        <activity
             android:name=".activities.SettingsActivity"
             android:configChanges="orientation"
             android:exported="true"
@@ -143,6 +152,13 @@
             android:launchMode="singleTask"
             android:screenOrientation="portrait"
             android:showOnLockScreen="true" />
+
+        <activity
+            android:name=".activities.NumberHistoryActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"
+            android:label="@string/dpad_history_title"
+            android:parentActivityName=".activities.MainActivity" />
 
         <activity
             android:name=".activities.DialpadActivity"
@@ -227,6 +243,15 @@
                 <action android:name="android.telecom.CallScreeningService" />
             </intent-filter>
         </service>
+
+        <!-- Android Telecom sends missed-call notifications to the selected default dialer. -->
+        <receiver
+            android:name=".receivers.MissedCallReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.telecom.action.SHOW_MISSED_CALLS_NOTIFICATION" />
+            </intent-filter>
+        </receiver>
 
         <receiver
             android:name=".receivers.CallActionReceiver"

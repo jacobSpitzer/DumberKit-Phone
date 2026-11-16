@@ -21,10 +21,18 @@ import android.view.ViewGroup
 
 import android.view.View
 
+import android.Manifest
+import android.content.ActivityNotFoundException
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.appcompat.app.AlertDialog
 import android.content.Intent
+import android.telecom.TelecomManager
+import android.provider.Settings
 import android.net.Uri
 import android.os.Bundle
 import android.view.Menu
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -65,6 +73,8 @@ import org.fossify.phone.extensions.canLaunchAccountsConfiguration
 import org.fossify.phone.extensions.config
 import org.fossify.phone.extensions.launchAccountsConfiguration
 import org.fossify.phone.helpers.RecentsHelper
+import org.fossify.phone.recording.RecordingNames
+import org.fossify.commons.helpers.ensureBackgroundThread
 import org.fossify.phone.models.RecentCall
 import java.util.Locale
 import kotlin.system.exitProcess
@@ -82,6 +92,18 @@ class SettingsActivity : SimpleActivity() {
     }
 
     private val binding by viewBinding(ActivitySettingsBinding::inflate)
+
+    private val selectPhoneRecordFolder: ActivityResultLauncher<Uri?> =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+            if (uri == null) return@registerForActivityResult
+            if (RecordingNames.useFolder(this, uri)) {
+                toast(R.string.dpad_recording_folder_saved)
+                setupRecordingFolder()
+                ensureBackgroundThread { RecordingNames.renamePending(applicationContext) }
+            } else {
+                toast(R.string.dpad_recording_folder_invalid)
+            }
+        }
     private val getContent =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri != null) {
@@ -129,6 +151,9 @@ class SettingsActivity : SimpleActivity() {
         setupOnContactClick()
         setupDialPadOpen()
         setupGroupSubsequentCalls()
+        setupSystemCallingSettings()
+        setupRecordingFolder()
+        setupRecordingTools()
         setupStartNameWithSurname()
         setupTouchInput()
         setupScreenOff()
@@ -346,7 +371,7 @@ class SettingsActivity : SimpleActivity() {
         }
     }
 
-    /** Keys only by default; touch can be allowed (e.g. on phones with a bigger touchscreen). */
+    /** Touch is enabled by default; users can disable it for physical-key-only operation. */
     private fun setupTouchInput() {
         binding.apply {
             settingsTouchInput.isChecked = config.dpadTouchEnabled
@@ -507,6 +532,122 @@ class SettingsActivity : SimpleActivity() {
      * Keypad phones: a compact top bar, the focus frame on every row, About as the last row, and no rows for things
      * this app does its own way (it always starts on the call history, there's no on-screen dialpad and no swiping).
      */
+    private fun setupSystemCallingSettings() {
+        binding.settingsSystemCallSettingsHolder.setOnClickListener {
+            launchNativeCallSettings(TelecomManager.ACTION_SHOW_CALL_SETTINGS)
+        }
+        binding.settingsCallingAccountsHolder.setOnClickListener {
+            launchNativeCallSettings(TelecomManager.ACTION_CHANGE_PHONE_ACCOUNTS)
+        }
+    }
+
+    private fun launchNativeCallSettings(preferredAction: String) {
+        // The OEM owns supplementary GSM/IMS features such as waiting, forwarding,
+        // caller ID and voicemail. Use its public settings activities when available.
+        val otherAction = if (preferredAction == TelecomManager.ACTION_SHOW_CALL_SETTINGS) {
+            TelecomManager.ACTION_CHANGE_PHONE_ACCOUNTS
+        } else {
+            TelecomManager.ACTION_SHOW_CALL_SETTINGS
+        }
+        for (action in listOf(preferredAction, otherAction)) {
+            try {
+                startActivity(Intent(action))
+                return
+            } catch (_: ActivityNotFoundException) {
+                // Some OEMs do not expose this settings entry point.
+            } catch (_: SecurityException) {
+                // The firmware may reserve this screen for system apps.
+            }
+        }
+        toast(R.string.dpad_call_settings_unavailable)
+        try {
+            startActivity(Intent(Settings.ACTION_SETTINGS))
+        } catch (_: Exception) {
+            // No callable settings app; returning is safer than crashing the dialer.
+        }
+    }
+
+    private fun setupRecordingTools() {
+        binding.settingsRecordingsListHolder.setOnClickListener {
+            startActivity(Intent(this, RecordingsActivity::class.java))
+        }
+        binding.settingsPermissionsHolder.setOnClickListener {
+            showPermissionStatus()
+        }
+    }
+
+    /**
+     * Non-privileged dialers cannot silently obtain every Phone/Telecom permission.
+     * Report the actual grants, request only runtime permissions, and give direct
+     * access to Android's app permissions screen.
+     */
+    private fun showPermissionStatus() {
+        val items = mutableListOf(
+            "Contacts" to Manifest.permission.READ_CONTACTS,
+            "Edit contacts" to Manifest.permission.WRITE_CONTACTS,
+            "Call history" to Manifest.permission.READ_CALL_LOG,
+            "Edit call history" to Manifest.permission.WRITE_CALL_LOG,
+            "Place calls" to Manifest.permission.CALL_PHONE,
+            "Phone state" to Manifest.permission.READ_PHONE_STATE,
+            "Answer calls" to Manifest.permission.ANSWER_PHONE_CALLS,
+            "Microphone / native recording" to Manifest.permission.RECORD_AUDIO
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            items += "Audio recordings" to Manifest.permission.READ_MEDIA_AUDIO
+            items += "Missed-call notifications" to Manifest.permission.POST_NOTIFICATIONS
+        } else {
+            items += "Audio recordings" to Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+
+        val defaultDialer = (getSystemService(TELECOM_SERVICE) as TelecomManager)
+            .defaultDialerPackage == packageName
+        val missing = items.filter { checkSelfPermission(it.second) != PackageManager.PERMISSION_GRANTED }
+        val status = buildString {
+            append(getString(R.string.dpad_permissions_default_dialer))
+            append(": ")
+            append(getString(if (defaultDialer) R.string.dpad_permissions_granted
+                else R.string.dpad_permissions_missing))
+            append("\n")
+            items.forEach { (name, permission) ->
+                append(name)
+                append(": ")
+                append(getString(if (checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED)
+                    R.string.dpad_permissions_granted else R.string.dpad_permissions_missing))
+                append("\n")
+            }
+            append("Recording folder: ")
+            append(getString(if (RecordingNames.hasReadableFolder(this@SettingsActivity))
+                R.string.dpad_permissions_granted else R.string.dpad_permissions_missing))
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.dpad_permissions_title)
+            .setMessage(status)
+            .setPositiveButton(R.string.dpad_permissions_request) { _, _ ->
+                if (missing.isNotEmpty()) {
+                    requestPermissions(missing.map { it.second }.toTypedArray(), 4306)
+                }
+            }
+            .setNeutralButton(R.string.dpad_permissions_app_settings) { _, _ ->
+                startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.parse("package:$packageName")
+                })
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun setupRecordingFolder() {
+        binding.apply {
+            settingsRecordingNamingLabel.text = RecordingNames.folderName(this@SettingsActivity)
+                ?.let { getString(R.string.dpad_selected_recording_folder, it) }
+                ?: getString(R.string.dpad_recording_folder_setup)
+            settingsRecordingNamingHolder.setOnClickListener {
+                // Android grants access to this folder only after user selection.
+                selectPhoneRecordFolder.launch(null)
+            }
+        }
+    }
+
     private fun setupForKeys() = binding.apply {
         dpadCompactTopBar(settingsAppbar, settingsNestedScrollview)
         settingsToolbar.menu.clear()

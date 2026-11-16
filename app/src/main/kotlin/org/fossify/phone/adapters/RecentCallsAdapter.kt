@@ -36,6 +36,7 @@ import org.fossify.commons.extensions.formatTime
 import org.fossify.commons.extensions.getColoredDrawableWithColor
 import org.fossify.commons.extensions.getContrastColor
 import org.fossify.commons.extensions.getPopupMenuTheme
+import org.fossify.commons.extensions.getProperPrimaryColor
 import org.fossify.commons.extensions.getProperTextColor
 import org.fossify.commons.extensions.getTextSize
 import org.fossify.commons.extensions.highlightTextPart
@@ -50,10 +51,10 @@ import org.fossify.commons.models.contacts.Contact
 import org.fossify.commons.views.MyRecyclerView
 import org.fossify.phone.R
 import org.fossify.phone.activities.MainActivity
+import org.fossify.phone.activities.NumberHistoryActivity
 import org.fossify.phone.activities.SimpleActivity
 import org.fossify.phone.databinding.ItemRecentCallBinding
 import org.fossify.phone.databinding.ItemRecentsDateBinding
-import org.fossify.phone.dialogs.ShowGroupedCallsDialog
 import org.fossify.phone.extensions.areMultipleSIMsAvailable
 import org.fossify.phone.extensions.callContactWithSimWithConfirmationCheck
 import org.fossify.phone.extensions.config
@@ -88,6 +89,14 @@ class RecentCallsAdapter(
     private var missedCallColor = resources.getColor(R.color.color_missed_call)
     private var secondaryTextColor = textColor.adjustAlpha(0.6f)
     private var textToHighlight = ""
+    private var recordedCallIds: Set<Int> = emptySet()
+
+    /** Recording lookup is computed asynchronously by RecentsFragment, never while binding rows. */
+    fun updateRecordedCallIds(ids: Set<Int>) {
+        if (recordedCallIds == ids) return
+        recordedCallIds = ids
+        notifyDataSetChanged()
+    }
     private var durationPadding = resources.getDimension(R.dimen.normal_margin).toInt()
     private var phoneNumberUtilInstance: PhoneNumberUtil = PhoneNumberUtil.getInstance()
     private var phoneNumberOfflineGeocoderInstance: PhoneNumberOfflineGeocoder = PhoneNumberOfflineGeocoder.getInstance()
@@ -300,8 +309,7 @@ class RecentCallsAdapter(
 
     private fun showCallDetails() {
         val recentCall = getSelectedItems().firstOrNull() ?: return
-        val recentCalls = recentCall.groupedCalls ?: listOf(recentCall)
-        ShowGroupedCallsDialog(activity, recentCalls)
+        NumberHistoryActivity.open(activity, recentCall.phoneNumber, recentCall.name)
     }
 
     private fun copyNumber() {
@@ -620,6 +628,11 @@ class RecentCallsAdapter(
                 }
 
                 itemRecentsType.setImageDrawable(drawable)
+                itemRecentsRecordingIcon.beVisibleIf(
+                    call.id in recordedCallIds ||
+                        call.groupedCalls?.any { it.id in recordedCallIds } == true
+                )
+                itemRecentsRecordingIcon.setColorFilter(activity.getProperPrimaryColor())
 
                 overflowMenuIcon.beVisibleIf(showOverflowMenu)
                 overflowMenuIcon.drawable.apply {

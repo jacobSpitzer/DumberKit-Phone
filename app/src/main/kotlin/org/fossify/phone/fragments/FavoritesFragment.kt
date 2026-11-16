@@ -22,6 +22,7 @@ import org.fossify.commons.helpers.VIEW_TYPE_GRID
 import org.fossify.commons.models.contacts.Contact
 import org.fossify.commons.views.MyGridLayoutManager
 import org.fossify.commons.views.MyLinearLayoutManager
+import org.fossify.phone.helpers.KeypadContactSearch
 import org.fossify.phone.R
 import org.fossify.phone.activities.SimpleActivity
 import org.fossify.phone.adapters.ContactsAdapter
@@ -199,11 +200,15 @@ class FavoritesFragment(context: Context, attributeSet: AttributeSet) : MyViewPa
 
     override fun onSearchQueryChanged(text: String) {
         val fixedText = text.trim().replace("\\s+".toRegex(), " ")
-        val contacts = allContacts.filter {
-            it.name.contains(fixedText, true) || (text.toLongOrNull() != null && it.doesContainPhoneNumber(fixedText))
-        }.sortedByDescending {
-            it.name.startsWith(fixedText, true)
-        }.toMutableList() as ArrayList<Contact>
+        val contacts = if (fixedText.all(Char::isDigit)) {
+            ArrayList(allContacts.filter { KeypadContactSearch.matches(it, fixedText) }
+                .sortedByDescending { KeypadContactSearch.startsWith(it, fixedText) })
+        } else {
+            ArrayList(allContacts.filter {
+                it.name.contains(fixedText, true) ||
+                    (text.toLongOrNull() != null && it.doesContainPhoneNumber(fixedText))
+            }.sortedByDescending { it.name.startsWith(fixedText, true) })
+        }
 
         binding.fragmentPlaceholder.beVisibleIf(contacts.isEmpty())
         (binding.fragmentList.adapter as? ContactsAdapter)?.updateItems(contacts, fixedText)

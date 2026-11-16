@@ -96,6 +96,7 @@ class MainActivity : SimpleActivity() {
     var cachedContacts = ArrayList<Contact>()
 
     private val isSearchOpen get() = binding.mainSearchBar.visibility == View.VISIBLE
+    private var isTextSearchMode = false
     private val toolbarButtons get() = listOf(binding.mainLetters, binding.mainSearch, binding.mainDialpad, binding.mainMore)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -134,11 +135,9 @@ class MainActivity : SimpleActivity() {
         binding.viewPager.requestFocus()
         focusListAtStart()
 
-        // A physical green Call key on the launcher sends ACTION_CALL_BUTTON on many ROMs.
-        // Open the keypad directly instead of showing the call history first.
-        if (savedInstanceState == null && intent.action == Intent.ACTION_CALL_BUTTON) {
-            launchDialpad()
-        }
+        // The DOOV's physical green Call key launches this MainActivity through
+        // ACTION_CALL_BUTTON. Show the normal call history / contacts home screen,
+        // not the number-entry dialpad. The on-screen Dialpad button still opens it.
     }
 
     override fun onResume() {
@@ -314,9 +313,17 @@ class MainActivity : SimpleActivity() {
         binding.mainMore.setOnClickListener { showMoreMenu() }
         binding.mainSearchClose.setOnClickListener { closeSearch() }
 
-        // Traditional T9 and similar keyboards: "visible password" disables predictive mode, so names are typed
-        // letter by letter (ABC), and the locale hint switches to English just for this field
-        binding.mainSearchInput.imeHintLocales = LocaleList(Locale.ENGLISH)
+        // Numeric T9 is the default; pressing ABC/אב (or tapping the text field)
+        // activates normal English/Hebrew text input with the system keyboard.
+        // Keep the EditText's key listener so actual letters can be entered.
+        binding.mainSearchInput.showSoftInputOnFocus = false
+        binding.mainSearchInput.isCursorVisible = false
+        binding.mainSearchInput.setOnClickListener { enableTextSearchMode() }
+        binding.mainSearchLetters.applyDpadFocusHighlight()
+        binding.mainSearchLetters.setOnClickListener {
+            if (isTextSearchMode) disableTextSearchMode()
+            else enableTextSearchMode()
+        }
 
         binding.mainSearchInput.doAfterTextChanged { text ->
             if (isSearchOpen && !searchFromHistory) {
@@ -333,6 +340,7 @@ class MainActivity : SimpleActivity() {
         binding.mainSearchInput.setTextColor(textColor)
         binding.mainSearchInput.setHintTextColor(textColor.adjustAlpha(0.5f))
         (toolbarButtons + binding.mainSearchClose).forEach { it.applyColorFilter(textColor) }
+        binding.mainSearchLetters.setTextColor(textColor)
         window.statusBarColor = barColor
     }
 
@@ -377,6 +385,7 @@ class MainActivity : SimpleActivity() {
     }
 
     private fun openSearch() {
+        disableTextSearchMode()
         searchFromHistory = getCurrentFragment() is RecentsFragment && visibleTabs(config.showTabs).contains(TAB_CONTACTS)
         if (!isSearchOpen) {
             getAllFragments().forEach { it?.finishActMode() }
@@ -387,27 +396,11 @@ class MainActivity : SimpleActivity() {
         binding.mainSearchInput.apply {
             setText("")
             moveFocusOutOfList { requestFocus() }
-            showSearchKeyboard(this)
+            hideKeyboardKeepingFocus()
         }
         if (!searchFromHistory) {
             getCurrentFragment()?.onSearchQueryChanged("")
         }
-    }
-
-    /** Connects the phone's keyboard (e.g. Traditional T9) right away, so it's active before the first key press. */
-    private fun showSearchKeyboard(input: EditText, attemptsLeft: Int = 10) {
-        input.postDelayed({
-            if (!isSearchOpen || isDestroyed) {
-                return@postDelayed
-            }
-
-            val inputMethodManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-            if (!input.hasWindowFocus() || !inputMethodManager.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)) {
-                if (attemptsLeft > 0) {
-                    showSearchKeyboard(input, attemptsLeft - 1)
-                }
-            }
-        }, 50)
     }
 
     private fun closeSearch() {
@@ -415,6 +408,7 @@ class MainActivity : SimpleActivity() {
             return
         }
 
+        disableTextSearchMode()
         hideKeyboardKeepingFocus()
         searchFromHistory = false
         binding.mainSearchInput.setText("")
@@ -429,6 +423,29 @@ class MainActivity : SimpleActivity() {
     }
 
     private fun getCurrentQuery() = if (isSearchOpen) binding.mainSearchInput.text.toString() else ""
+
+    private fun enableTextSearchMode() {
+        isTextSearchMode = true
+        binding.mainSearchLetters.setText(R.string.dpad_t9_search_mode)
+        binding.mainSearchInput.apply {
+            showSoftInputOnFocus = true
+            isCursorVisible = true
+            requestFocus()
+            setSelection(text.length)
+            post {
+                (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager)
+                    .showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
+            }
+        }
+    }
+
+    private fun disableTextSearchMode() {
+        isTextSearchMode = false
+        binding.mainSearchLetters.setText(R.string.dpad_text_search_mode)
+        binding.mainSearchInput.showSoftInputOnFocus = false
+        binding.mainSearchInput.isCursorVisible = false
+        hideKeyboardKeepingFocus()
+    }
 
     /** Unlike Commons' hideKeyboard() this keeps the focus, which would otherwise flash on the top bar. */
     private fun hideKeyboardKeepingFocus() {
@@ -741,6 +758,27 @@ class MainActivity : SimpleActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // Search is T9-only: physical digits filter contacts rather than launching Dialpad,
+        // and the soft keyboard is never invoked (also works when the firmware has no IME).
+        if (isSearchOpen && !isTextSearchMode &&
+            event.keyCode in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                val digit = ('0' + event.keyCode - KeyEvent.KEYCODE_0).toString()
+                binding.mainSearchInput.setText(getCurrentQuery() + digit)
+                binding.mainSearchInput.requestFocus()
+            }
+            return true
+        }
+        if (isSearchOpen && (event.keyCode == KeyEvent.KEYCODE_DEL ||
+                (event.keyCode == KeyEvent.KEYCODE_BACK && getCurrentQuery().isNotEmpty()))) {
+            // DOOV has a Back key but no dedicated physical Delete key. Back deletes
+            // a digit while searching; once the query is empty Back closes Search.
+            if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) {
+                binding.mainSearchInput.setText(getCurrentQuery().dropLast(1))
+                binding.mainSearchInput.requestFocus()
+            }
+            return true
+        }
         val inEditText = currentFocus is EditText
 
         // open the popup and the letter grid on key up, otherwise the new window receives the key up and stops
@@ -780,7 +818,8 @@ class MainActivity : SimpleActivity() {
         val list = fragment?.getListView()
         val inList = focused != null && list != null && list.findContainingItemView(focused) != null
         val inPager = focused != null && focused.isInside(binding.viewPager)
-        val inTopBar = focused != null && (focused in toolbarButtons || focused == binding.mainSearchClose || focused == binding.mainSearchInput)
+        val inTopBar = focused != null && (focused in toolbarButtons || focused == binding.mainSearchClose ||
+            focused == binding.mainSearchInput || focused == binding.mainSearchLetters)
 
         when (event.keyCode) {
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {

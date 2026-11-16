@@ -20,6 +20,7 @@ import org.fossify.commons.helpers.PERMISSION_READ_CONTACTS
 import org.fossify.commons.helpers.SMT_PRIVATE
 import org.fossify.commons.helpers.getProperText
 import org.fossify.commons.models.contacts.Contact
+import org.fossify.phone.helpers.KeypadContactSearch
 import org.fossify.phone.R
 import org.fossify.phone.activities.MainActivity
 import org.fossify.phone.activities.SimpleActivity
@@ -158,6 +159,15 @@ class ContactsFragment(context: Context, attributeSet: AttributeSet) : MyViewPag
 
     override fun onSearchQueryChanged(text: String) {
         val fixedText = text.trim().replace("\\s+".toRegex(), " ")
+        if (fixedText.all(Char::isDigit)) {
+            val matches = ArrayList(allContacts.filter { KeypadContactSearch.matches(it, fixedText) }
+                .sortedByDescending { KeypadContactSearch.startsWith(it, fixedText) })
+            binding.fragmentPlaceholder.beVisibleIf(matches.isEmpty())
+            (binding.fragmentList.adapter as? ContactsAdapter)?.updateItems(matches)
+            setupLetterFastScroller(matches)
+            return
+        }
+
         val shouldNormalize = fixedText.normalizeString() == fixedText
         val filtered = allContacts.filter { contact ->
             getProperText(contact.getNameToDisplay(), shouldNormalize).contains(fixedText, true) ||
