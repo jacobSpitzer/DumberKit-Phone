@@ -134,11 +134,9 @@ class MainActivity : SimpleActivity() {
         binding.viewPager.requestFocus()
         focusListAtStart()
 
-        // A physical green Call key on the launcher sends ACTION_CALL_BUTTON on many ROMs.
-        // Open the keypad directly instead of showing the call history first.
-        if (savedInstanceState == null && intent.action == Intent.ACTION_CALL_BUTTON) {
-            launchDialpad()
-        }
+        // The DOOV's physical green Call key launches this MainActivity through
+        // ACTION_CALL_BUTTON. Show the normal call history / contacts home screen,
+        // not the number-entry dialpad. The on-screen Dialpad button still opens it.
     }
 
     override fun onResume() {
