@@ -341,6 +341,40 @@
 
             </RelativeLayout>
 
+            <!-- Android/MediaTek owns supplementary telephony settings (call forwarding,
+                 waiting, caller ID, voicemail, barring). Do not fake these in our UI. -->
+            <RelativeLayout
+                android:id="@+id/settings_system_call_settings_holder"
+                style="@style/SettingsHolderTextViewOneLinerStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clickable="true"
+                android:focusable="true">
+
+                <org.fossify.commons.views.MyTextView
+                    android:id="@+id/settings_system_call_settings"
+                    style="@style/SettingsTextLabelStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/dpad_system_call_settings" />
+            </RelativeLayout>
+
+            <RelativeLayout
+                android:id="@+id/settings_calling_accounts_holder"
+                style="@style/SettingsHolderTextViewOneLinerStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clickable="true"
+                android:focusable="true">
+
+                <org.fossify.commons.views.MyTextView
+                    android:id="@+id/settings_calling_accounts"
+                    style="@style/SettingsTextLabelStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/dpad_calling_accounts" />
+            </RelativeLayout>
+
             <!-- Folder access is an actionable row, not a disabled-looking switch. -->
             <RelativeLayout
                 android:id="@+id/settings_recording_naming_holder"
