@@ -362,7 +362,7 @@ class SettingsActivity : SimpleActivity() {
         }
     }
 
-    /** Keys only by default; touch can be allowed (e.g. on phones with a bigger touchscreen). */
+    /** Touch is enabled by default; users can disable it for physical-key-only operation. */
     private fun setupTouchInput() {
         binding.apply {
             settingsTouchInput.isChecked = config.dpadTouchEnabled
