@@ -32,28 +32,50 @@ object RecordingNames {
         .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         .getString(TREE, null)?.let(Uri::parse)
 
-    /** The selected folder must be the MediaTek PhoneRecord directory, not storage root. */
+    /**
+     * Any user-selected *recording* directory is supported; different MTK ROMs
+     * use different names. Do not guess a directory from its label.
+     */
     fun useFolder(context: Context, uri: Uri): Boolean = try {
         val root = DocumentsContract.buildDocumentUriUsingTree(
             uri, DocumentsContract.getTreeDocumentId(uri)
         )
-        val name = context.contentResolver.query(
-            root, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME),
-            null, null, null
-        )?.use { if (it.moveToFirst()) it.getString(0) else "" }.orEmpty()
-        if (!name.equals("PhoneRecord", ignoreCase = true)) {
+        val nameAndType = context.contentResolver.query(
+            root, arrayOf(
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                DocumentsContract.Document.COLUMN_MIME_TYPE
+            ), null, null, null
+        )?.use {
+            if (it.moveToFirst()) (it.getString(0).orEmpty() to it.getString(1).orEmpty())
+            else null
+        }
+        if (nameAndType == null || nameAndType.second != DocumentsContract.Document.MIME_TYPE_DIR) {
             false
         } else {
             context.contentResolver.takePersistableUriPermission(
                 uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             )
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .edit().putString(TREE, uri.toString()).apply()
+                .edit()
+                .putString(TREE, uri.toString())
+                .putString("recording_folder_display_name", nameAndType.first)
+                .apply()
             true
         }
     } catch (e: Exception) {
-        Log.w(TAG, "Folder permission was not granted", e)
+        Log.w(TAG, "Recording folder permission was not granted", e)
         false
+    }
+
+    fun folderName(context: Context): String? = context
+        .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        .getString("recording_folder_display_name", null)
+
+    fun hasReadableFolder(context: Context): Boolean {
+        val uri = folderUri(context) ?: return false
+        return context.contentResolver.persistedUriPermissions.any { permission ->
+            permission.uri == uri && permission.isReadPermission
+        }
     }
 
     /** Call only after native Telecom accepted dispatching REQUEST_START_VOICE_RECORDING. */
@@ -102,7 +124,7 @@ object RecordingNames {
     /** Returns how many files were renamed; call off the main thread only. */
     @Synchronized
     fun renamePending(context: Context): Int {
-        val tree = folderUri(context) ?: return 0
+        val tree = folderUri(context)?.takeIf { hasReadableFolder(context) } ?: return 0
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val sessions = readPending(prefs.getString(PENDING, null))
         if (sessions.isEmpty()) return 0
