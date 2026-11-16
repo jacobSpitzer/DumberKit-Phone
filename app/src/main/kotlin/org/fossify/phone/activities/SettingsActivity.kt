@@ -21,7 +21,10 @@ import android.view.ViewGroup
 
 import android.view.View
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.telecom.TelecomManager
+import android.provider.Settings
 import android.net.Uri
 import android.os.Bundle
 import android.view.Menu
@@ -144,6 +147,7 @@ class SettingsActivity : SimpleActivity() {
         setupOnContactClick()
         setupDialPadOpen()
         setupGroupSubsequentCalls()
+        setupSystemCallingSettings()
         setupRecordingFolder()
         setupStartNameWithSurname()
         setupTouchInput()
@@ -523,6 +527,41 @@ class SettingsActivity : SimpleActivity() {
      * Keypad phones: a compact top bar, the focus frame on every row, About as the last row, and no rows for things
      * this app does its own way (it always starts on the call history, there's no on-screen dialpad and no swiping).
      */
+    private fun setupSystemCallingSettings() {
+        binding.settingsSystemCallSettingsHolder.setOnClickListener {
+            launchNativeCallSettings(TelecomManager.ACTION_SHOW_CALL_SETTINGS)
+        }
+        binding.settingsCallingAccountsHolder.setOnClickListener {
+            launchNativeCallSettings(TelecomManager.ACTION_CHANGE_PHONE_ACCOUNTS)
+        }
+    }
+
+    private fun launchNativeCallSettings(preferredAction: String) {
+        // The OEM owns supplementary GSM/IMS features such as waiting, forwarding,
+        // caller ID and voicemail. Use its public settings activities when available.
+        val otherAction = if (preferredAction == TelecomManager.ACTION_SHOW_CALL_SETTINGS) {
+            TelecomManager.ACTION_CHANGE_PHONE_ACCOUNTS
+        } else {
+            TelecomManager.ACTION_SHOW_CALL_SETTINGS
+        }
+        for (action in listOf(preferredAction, otherAction)) {
+            try {
+                startActivity(Intent(action))
+                return
+            } catch (_: ActivityNotFoundException) {
+                // Some OEMs do not expose this settings entry point.
+            } catch (_: SecurityException) {
+                // The firmware may reserve this screen for system apps.
+            }
+        }
+        toast(R.string.dpad_call_settings_unavailable)
+        try {
+            startActivity(Intent(Settings.ACTION_SETTINGS))
+        } catch (_: Exception) {
+            // No callable settings app; returning is safer than crashing the dialer.
+        }
+    }
+
     private fun setupRecordingFolder() {
         binding.apply {
             settingsRecordingNamingLabel.setText(
