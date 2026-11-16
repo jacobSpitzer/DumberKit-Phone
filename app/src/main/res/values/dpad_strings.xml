@@ -31,6 +31,8 @@
     <string name="dpad_history_playback_failed">Unable to open recording</string>
     <string name="dpad_history_call_again">Call</string>
     <string name="dpad_history_call_details">Date: %1$s\nType: %2$s\nDuration: %3$s</string>
+    <string name="dpad_text_search_mode">ABC/אב</string>
+    <string name="dpad_t9_search_mode">T9</string>
     <string name="dpad_t9_search_hint">Search names or numbers (T9)</string>
     <string name="dpad_previously_dialed">Previously dialed</string>
     <string name="dpad_dial_previous_number">Call previous number %1$s</string>
