@@ -341,23 +341,53 @@
 
             </RelativeLayout>
 
-            <!-- One-time access to the native MediaTek PhoneRecord folder for file naming. -->
+            <!-- Folder access is an actionable row, not a disabled-looking switch. -->
             <RelativeLayout
                 android:id="@+id/settings_recording_naming_holder"
-                style="@style/SettingsHolderSwitchStyle"
+                style="@style/SettingsHolderTextViewOneLinerStyle"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                android:clickable="true"
+                android:focusable="true">
 
-                <TextView
+                <org.fossify.commons.views.MyTextView
                     android:id="@+id/settings_recording_naming_label"
+                    style="@style/SettingsTextLabelStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:minHeight="@dimen/dpad_settings_row_height"
-                    android:paddingStart="@dimen/activity_margin"
-                    android:paddingEnd="@dimen/activity_margin"
-                    android:text="@string/dpad_recording_folder_setup"
-                    android:textSize="@dimen/dpad_detail_text_size" />
+                    android:text="@string/dpad_recording_folder_setup" />
+            </RelativeLayout>
+
+            <RelativeLayout
+                android:id="@+id/settings_recordings_list_holder"
+                style="@style/SettingsHolderTextViewOneLinerStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clickable="true"
+                android:focusable="true">
+
+                <org.fossify.commons.views.MyTextView
+                    android:id="@+id/settings_recordings_list_label"
+                    style="@style/SettingsTextLabelStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/dpad_browse_recordings" />
+            </RelativeLayout>
+
+            <RelativeLayout
+                android:id="@+id/settings_permissions_holder"
+                style="@style/SettingsHolderTextViewOneLinerStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clickable="true"
+                android:focusable="true">
+
+                <org.fossify.commons.views.MyTextView
+                    android:id="@+id/settings_permissions_label"
+                    style="@style/SettingsTextLabelStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/dpad_check_permissions" />
             </RelativeLayout>
 
             <RelativeLayout
